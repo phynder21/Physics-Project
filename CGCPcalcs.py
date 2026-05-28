@@ -1,3 +1,4 @@
+import math
 #parameters (all adjustable in simulation)
 #BODY TUBE
 BT_length = 15.0
@@ -24,12 +25,14 @@ elif NC_shape =="Conical":
 
 #Normal Coeffs
 C_N_NC =2
+
 if (F_num == 4) or (F_num ==3):
     K = 1 + (BT_dia/2)/( F_span + BT_dia/2)
 elif (F_num == 6):
     K = 1 + (BT_dia/4)/( F_span + BT_dia/2)
-C_N_finbefore = 
-C_N_F = K
+l = math.sqrt(F_sweep^2 +((F_root-F_tip)/2 + F_sweep)^2)
+C_N_finbefore = ((4)(F_num)(F_span/BT_dia)^2)/(1+ math.sqrt(1+ ((2*l)/(F_root+F_tip))^2))
+C_N_F = K * C_N_finbefore
 
 #Center of Gravitys
 x_BT = NC_length + (BT_length/2)
