@@ -80,6 +80,7 @@ def on_reset():
     draw_ui()
 
 def draw_ui():
+    scene.caption = ""
     #formatting
     scene.append_to_caption("<div style='margin-left: 30px; display: inline-block; vertical-align: top; font-family: sans-serif;'>")
     scene.append_to_caption("<div><h2 style='margin: 0;'>Design Workbench</h2></div>")
