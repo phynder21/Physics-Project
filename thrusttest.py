@@ -2,11 +2,6 @@ import pandas as pd
 import numpy as np
 from vpython import *
 
-t= 0.00
-dt =0.01
-m_first = 0.1 #start here change later when we calculate mass
-dm =0
-
 df_c6 = pd.read_csv('C6.csv')
 df_d12 = pd.read_csv('D12.csv')
 df_f15 = pd.read_csv('F15.csv')
@@ -33,32 +28,12 @@ def build_motor(df, mass_prop, mass_dry,name):
     
     def thrust(time):
         return float(np.interp(time, time_arr, Thrust_arr))
-    def mass(time):
-        if time <= 0:
-            return mass_dry +mass_prop
-        elif time >= burn_time:
-            return mass_dry
+    def dm(time):
+        if time <= 0 or time >= burn_time:
+            return 0
         else:
-            burnt = float(np.interp(time, time_arr, cumalative_mass_lost))
-            return mass_dry + mass_prop - burnt
+            return float(np.interp(time, time_arr, cumalative_mass_lost))
     
-    return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'mass': mass}
+    return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'dm': dm}
 
 motor_date = [ build_motor(df, mass_prop, mass_dry,name) for df,mass_prop, mass_dry, name in zip(motors, prop_masses, dry_masses, labels)]
-# v_es =[]
-# Thrust_dict = {}
-# count =0
-# for thrust_curve in motors: 
- 
-
-#     impulse = np.trapezoid(y_arr, x = x_arr)
-#     v_e = impulse/masses[count]
-#     v_e = round(v_e, 4)
-#     v_es.append(v_e)
-#     def Thurst(time,):
-#         #ill come back to this
-#     count += 1
-
-# print(v_es)
-
-
