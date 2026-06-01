@@ -1,6 +1,37 @@
+#imports
 import pandas as pd
 import numpy as np
+import math
 from vpython import *
+#world vars (set by sliders)
+wind_V = 3.0
+wind_angle = 30
+
+wind_VX = math.cos(math.radians(wind_angle))
+wind_VY = math.sin(math.radians(wind_angle))
+
+#BODY TUBE
+BT_length = 15.0
+BT_dia = 4.0
+#FINS
+F_root = 4.0
+F_tip = 5.0
+F_span = 2.0
+F_sweep = 3.0
+F_num = 4
+#NOSE
+NC_shape = "Parabolic" #("Ogive", "Parabolic", "Conical")
+NC_length = 3.0
+#PARACHUTE 
+PC_line = 6.0
+PC_diam = 15 
+#MOTOR 
+motor = "C6"
+
+#general constants 
+g=9.81
+
+#THRUST and dt
 
 df_c6 = pd.read_csv('C6.csv')
 df_d12 = pd.read_csv('D12.csv')
@@ -37,3 +68,15 @@ def build_motor(df, mass_prop, mass_dry,name):
     return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'dm': dm}
 
 motor_date = [ build_motor(df, mass_prop, mass_dry,name) for df,mass_prop, mass_dry, name in zip(motors, prop_masses, dry_masses, labels)]
+
+#center of pressure and center of gravity location
+def calc_CG(time):
+    
+
+#drag force
+
+#normal force 
+
+#wind force 
+
+#rk4

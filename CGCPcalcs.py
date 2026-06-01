@@ -17,11 +17,11 @@ NC_length = 3.0
 
 #Center of Pressures and drags
 if NC_shape == "Ogive":
-    X_NC = (2/3)(NC_length)
+    X_NC = (2/3)*(NC_length)
 elif NC_shape == "Parabolic":
-    X_NC = (0.466)(NC_length)
+    X_NC = (0.466)*(NC_length)
 elif NC_shape =="Conical":
-    X_NC = (0.5)(NC_length)
+    X_NC = (0.5)*(NC_length)
 
 #Normal Coeffs
 C_N_NC =2
@@ -30,13 +30,13 @@ if (F_num == 4) or (F_num ==3):
     K = 1 + (BT_dia/2)/( F_span + BT_dia/2)
 elif (F_num == 6):
     K = 1 + (BT_dia/4)/( F_span + BT_dia/2)
-l = math.sqrt(F_sweep^2 +((F_root-F_tip)/2 + F_sweep)^2)
-C_N_finbefore = ((4)(F_num)(F_span/BT_dia)^2)/(1+ math.sqrt(1+ ((2*l)/(F_root+F_tip))^2))
+l = math.sqrt(F_sweep**2 +((F_root-F_tip)/2 + F_sweep)**2)
+C_N_finbefore = ((4)*(F_num)*(F_span/BT_dia)**2)/(1+ math.sqrt(1+ ((2*l)/(F_root+F_tip))**2))
 C_N_F = K * C_N_finbefore
 
 #Center of Gravitys
 x_BT = NC_length + (BT_length/2)
-x_NC = (0.75)(NC_length)
+x_NC = (0.75)*(NC_length)
 offset = NC_length + BT_length - F_root
 x_F = offset + F_sweep/2 + F_root/2
 
