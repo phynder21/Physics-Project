@@ -26,7 +26,7 @@ NC_length = 3.0
 PC_line = 6.0
 PC_diam = 15 
 #MOTOR 
-motor = "C6"
+motor_sel = "C6"
 
 #general constants 
 g=9.81
@@ -67,13 +67,23 @@ def build_motor(df, mass_prop, mass_dry,name):
     
     return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'dm': dm}
 
-motor_date = [ build_motor(df, mass_prop, mass_dry,name) for df,mass_prop, mass_dry, name in zip(motors, prop_masses, dry_masses, labels)]
+motor_data = [ build_motor(df, mass_prop, mass_dry,name) for df,mass_prop, mass_dry, name in zip(motors, prop_masses, dry_masses, labels)]
+
+if motor_sel == "C6": motor =motor_data[1]
+elif motor_sel == "D12": motor =motor_data[2]
+elif motor_sel == "F15": motor =motor_data[3]
 
 #center of pressure and center of gravity location
 def calc_CG(time):
-    
+
+    total_mass = 
+    x_CG = #weighted avg
+def calc_CP():
+
 
 #drag force
+def calc_CD(speed, t):
+    if t > 
 
 #normal force 
 
