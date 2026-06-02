@@ -7,8 +7,8 @@ from vpython import *
 wind_V = 3.0
 wind_angle = 30
 
-wind_VX = math.cos(math.radians(wind_angle))
-wind_VY = math.sin(math.radians(wind_angle))
+wind_VX = wind_V  * math.cos(math.radians(wind_angle))
+wind_VY = wind_V  * math.sin(math.radians(wind_angle))
 
 #BODY TUBE
 BT_length = 15.0
@@ -39,7 +39,7 @@ if NC_shape == "Conical":
     NC_area = math.pi * (BT_dia/2) * slant
 if NC_shape == "Ogive":
     rho_ogive = ((BT_dia/2)**2 + NC_length**2) / (2*BT_dia/2)
-    NC_area = 2 * math.pi * rho_ogive * (rho_ogive - math.sqrt(rho_ogive**2 - BT_dia/2**2))
+    NC_area = 2 * math.pi * rho_ogive * (rho_ogive - math.sqrt(rho_ogive**2 - (BT_dia/2)**2))
 if NC_shape == "Parabolic":
     n = 1000
     xs = [NC_length * i/n for i in range(n+1)]
@@ -64,10 +64,18 @@ motor_sel = "C6"
 motor_dc = 4.0
 
 #general constants 
+total_length = NC_length + BT_length
+A_ref = math.pi * (BT_dia/2)**2
+
+#more general constants
 g=9.81
+rho = 1.225
+mu = 1.81e-5
 dt =0.01
 sim_mode = False
 t=0
+vx = 0
+vy = 0
 
 #motor data
 
@@ -105,11 +113,11 @@ def build_motor(df, mass_prop, mass_dry,name,motor_length):
     
     return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'dm': dm ,'drymass': mass_dry, 'propmass': mass_prop, 'length': motor_length}
 
-motor_data = [ build_motor(df, mass_prop, mass_dry,name) for df,mass_prop, mass_dry, name in zip(motors, prop_masses, dry_masses, labels)]
+motor_data = [ build_motor(df, mass_prop, mass_dry,name) for df,mass_prop, mass_dry, name, length in zip(motors, prop_masses, dry_masses, labels, motor_lengths)]
 
-if motor_sel == "C6": motor =motor_data[1]
-elif motor_sel == "D12": motor =motor_data[2]
-elif motor_sel == "F15": motor =motor_data[3]
+if motor_sel == "C6": motor =motor_data[0]
+elif motor_sel == "D12": motor =motor_data[1]
+elif motor_sel == "F15": motor =motor_data[2]
 
 #center of pressure and center of gravity locations and force
 def calc_CG(time):
@@ -119,7 +127,7 @@ def calc_CG(time):
     x_CG_NC = (3/4) * (NC_length)
     x_CG_PC = NC_length
 
-    mass_motor = motor['mass_dry'] + motor['mass_prop'] - motor['dm'](time) 
+    mass_motor = motor['drymass'] + motor['propmass'] - motor['dm'](time) 
 
     total_mass = mass_motor + BT_mass + F_mass + NC_mass +PC_mass
     x_CG = (x_CG_tube * BT_mass + x_CG_fins * F_mass + x_CG_motor * mass_motor + x_CG_NC * NC_mass + x_CG_PC * PC_mass)/ total_mass 
@@ -142,19 +150,51 @@ def calc_CP(t):
     l = math.sqrt(F_sweep**2 +((F_root-F_tip)/2 + F_sweep)**2)
     C_N_finbefore = ((4)*(F_num)*(F_span/BT_dia)**2)/(1+ math.sqrt(1+ ((2*l)/(F_root+F_tip))**2))
     CN_F = K * C_N_finbefore
-    X_CP_F = NC_length + BT_length - F_root + (F_sweep*(F_root+F_tip))/(3*(F_root+F_tip)) + (1/6)*(F_root+F_tip-( F_root * F_tip)/F_root+F_tip) 
+    X_CP_F = NC_length + BT_length - F_root + (F_sweep*(F_root+F_tip))/(3*(F_root+F_tip)) + (1/6)*(F_root+F_tip-( F_root * F_tip)/(F_root+F_tip) )
 
     CN_total = CN_NC + CN_F
-    X_CP = (CN_NC * X_CP_NC + CN_F * X_CP_NC)/CN_total
+    X_CP = (CN_NC * X_CP_NC + CN_F * X_CP_F)/CN_total
 
     return X_CP, CN_total
 
-#drag force
+#drag force and coeff
 def calc_CD(speed, t):
-    if t > motor['burn_time']:
+    Re = max(rho * speed * total_length/ mu , 1e4 )
+    Cf = 0.074/Re**2
 
+
+    fin_base = 0.5 * (F_root + F_tip) * F_span
+    A_wet = math.pi * BT_dia * total_length * F_num * fin_base
+    fineness = total_length/ BT_dia
+    CD_frict = Cf * (1+1/(2 *fineness)) * (A_wet/ A_ref)
+
+    half_angle = math.atan((BT_dia/2)/ NC_length)
+    if NC_shape == "Ogive":
+        CD_nose = (0.7) * math.sin(half_angle)**2
+    if NC_shape == "Parabolic":
+        CD_nose = (0.6) * math.sin(half_angle)**2
+    if NC_shape == "Conical":
+        CD_nose = (0.8) * math.sin(half_angle)**2
+
+    if t < motor['burn_time']: CD_base =0.12 
+    else: CD_base =0.25
+
+    t_fin =0.002
+    CD_interference = 0.04 * F_num * (t_fin/ BT_dia) #whaaaaaatidk where i got this
+
+    return CD_frict + CD_nose + CD_base + CD_interference
+
+def drag_force(vx,vy, speed,time):
+    if speed< 0.01: 
+        return 0.0 ,0.0
+    else: 
+        CD = calc_CD(speed,time)
+        F = 0.5 * rho * speed**2 *CD * A_ref
+        return -F * (vx/speed), -F *(vy/speed)
 
 #normal force 
+
+#moment of inertia 
 
 #wind force 
 
@@ -165,8 +205,18 @@ def calc_CD(speed, t):
 while sim_mode:
     rate(1/dt)
 
-    FX_tot =
-    FY_tot =
+    #rereunning functions 
+    
+    #recalculating constants
+    speed = math.sqrt(vx**2 +vy**2)
+    F_drag_x, F_drag_y = drag_force(vx,vy,speed,t)
+    Thrust_x = motor['Thrust'](t) * vx/speed
+    Thrust_y = motor['Thrust'](t) *vy/speed
+    x_CG, mass = calc_CG(t)
+    Fg_y = -mass * g
+
+    FX_tot = F_drag_x + Thrust_x
+    FY_tot = F_drag_y +Thrust_y + Fg_y
     t = t + dt
 
 F_tot
