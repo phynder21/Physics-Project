@@ -144,11 +144,37 @@ def makeRect(L, H):
         vector(-L/2, -H/2, 0),
     ]
 
-
-
-
-
 rect = curve(color=color.black)
+
+def MakeNosecone(length, diameter):
+    points = []
+    r = diameter/2
+    steps = 50
+    bt_top = state["bt_length"] / 2
+    nc_type = state["nc_type"]
+    for i in range(steps+1):
+        t = i/steps
+        y = bt_top + t * length
+        if nc_type == "Parabolic":
+            x = r * (1 - t ** 2)
+        elif nc_type == "Ogive":
+            x = r * sqrt(1 - t ** 2)
+        elif nc_type == "Conical":
+            x = r * (1 - t)
+        points.append(vector(x, y, 0))
+    for i in range (steps, -1, -1):
+        t= i / steps
+        y = bt_top + t * length
+        if nc_type == "Parabolic":
+            x = r * (1 - t ** 2)
+        elif nc_type == "Ogive":
+            x = r * sqrt(1 - t ** 2)
+        elif nc_type == "Conical":
+            x = r * (1 - t)
+        points.append(vector(-x, y, 0))
+    return points
+
+nosecone = curve(color=color.black)
 
 draw_ui()
 
@@ -157,6 +183,9 @@ while True:
     rect.clear()
     for p in makeRect(state["bt_diameter"], state["bt_length"]):
         rect.append(p)
+    nosecone.clear()
+    for p in MakeNosecone(state["nc_length"], state["bt_diameter"]):
+        nosecone.append(p)
 
 while True:
     rate(10)
