@@ -73,9 +73,16 @@ rho = 1.225
 mu = 1.81e-5
 dt =0.01
 sim_mode = False
+
+#global vars
 t=0
+x = 0
+y = 0
 vx = 0
 vy = 0
+theta = 0
+omega = 0
+
 
 #motor data
 
@@ -114,7 +121,7 @@ def build_motor(df, mass_prop, mass_dry,name,motor_length):
 
     return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'dm': dm ,'mass': mass, 'length': motor_length}
 
-motor_data = [ build_motor(df, mass_prop, mass_dry,name) for df,mass_prop, mass_dry, name, length in zip(motors, prop_masses, dry_masses, labels, motor_lengths)]
+motor_data = [ build_motor(df, mass_prop, mass_dry,name, length) for df,mass_prop, mass_dry, name, length in zip(motors, prop_masses, dry_masses, labels, motor_lengths)]
 
 if motor_sel == "C6": motor =motor_data[0]
 elif motor_sel == "D12": motor =motor_data[1]
@@ -135,7 +142,7 @@ def calc_CG(time):
 
     return x_CG, total_mass , x_CG_tube, x_CG_fins, x_CG_motor, x_CG_NC
 
-def calc_CP(t):
+def calc_CP():
     if NC_shape == "Ogive":
         X_CP_NC = (2/3)*(NC_length)
     elif NC_shape == "Parabolic":
@@ -161,11 +168,11 @@ def calc_CP(t):
 #drag force and coeff
 def calc_CD(speed, t):
     Re = max(rho * speed * total_length/ mu , 1e4 )
-    Cf = 0.074/Re**2
+    Cf = 0.074/Re**0.2
 
 
     fin_base = 0.5 * (F_root + F_tip) * F_span
-    A_wet = math.pi * BT_dia * total_length * F_num * fin_base
+    A_wet = math.pi * BT_dia * total_length + 2 *F_num * fin_base
     fineness = total_length/ BT_dia
     CD_frict = Cf * (1+1/(2 *fineness)) * (A_wet/ A_ref)
 
@@ -194,7 +201,7 @@ def drag_force(vx,vy, speed,time):
         return -F * (vx/speed), -F *(vy/speed)
 
 #normal force 
-def normal_force(vx,vy,speed,theta):
+def normal_force(vx,vy,speed,theta,t):
         rocket_ax = math.sin(theta)
         rocket_ay = math.cos(theta)
         perp_x = math.cos(theta)
@@ -208,7 +215,7 @@ def normal_force(vx,vy,speed,theta):
 
         alpha = math.atan2(vrel_perp, vrel_along)
 
-        x_CP, C_N_total = calc_CP()
+        x_CP, C_N_total = calc_CP(t)
         F_N = 0.5 * rho * vrel_mag**2 * C_N_total * alpha * A_ref
 
         return F_N * perp_x, F_N * perp_y
@@ -222,38 +229,56 @@ def calc_IN(t):
     NC_I_self = NC_mass * (3*(BT_dia/2)**2/20 + NC_length**2/10)
     NC_I = NC_I_self + NC_mass * (x_CG_NC - x_CG)**2
 
-    F_I_self = F_mass * #ill do ltr
-
-    # I_fin_own = m_f * (state["fin_a"]**2 + state["fin_s"]**2) / 12
-    # I_fins = I_fin_own + m_f * (x_f - x_CG)**2
+    F_I_self = F_mass * (F_root**2 + F_span**2) / 12
+    F_I = F_I_self + F_mass * (x_CG_fins - x_CG)**2
 
     motor_I = motor['mass'] * ((BT_dia/2)**2/4+(0.07**2)/12) + motor['mass'] * (x_CG_motor-x_CG)**2
 
-    return motor_I + BT_I +NC_I + F_I_self
-
-#wind force 
+    return motor_I + BT_I +NC_I + F_I
 
 #UPDATES IN SIM
 #rk4 --> updating acceleration --> updating velcity, height, pitch, vertical velocity, roll, horizontal dist)
 #
 
+def Accels(x,y, vx,vy, theta, omega,t):
+    speed = math.sqrt(vx**2 +vy**2)
+    x_CG, total_mass, __, __, __, __ = calc_CG(t)
+    x_CP, __ = calc_CP(t)
+
+    F_N_x, F_N_y = normal_force(vx,vy,speed, theta)
+    F_drag_x, F_drag_y = drag_force(vx,vy,speed,t)
+    Thrust_x = motor['thrust'](t) * math.sin(theta)
+    Thrust_y = motor['thrust'](t) * math.cos(theta)
+    Fg_y = -total_mass * g
+
+    ax = (Thrust_x + F_drag_x +F_N_x)/total_mass
+    ay = (Thrust_y + F_drag_y +F_N_y + Fg_y)/total_mass
+    F_N = math.sqrt(F_N_x**2 + F_N_y**2)
+    torque = F_N * (x_CP - x_CG)
+    a_roll = torque/calc_IN(t) 
+
+    return ax,ay, a_roll
+
+def rk4ing(x,y,vx,vy,theta,omega,t):
+    #ok lets skip on the rk4 for simplicity for now 
+    ax,ay, a_roll = Accels(x,y, vx,vy, theta, omega,t)
+
+    vx = vx + ax *dt
+    vy = vy + ay*dt
+    x = x + vx *dt
+    y = y+vy*dt
+
+    omega = omega + a_roll *dt
+    theta = theta +omega *dt
+
+    return x,y,vx,vy,theta,omega
+
 while sim_mode:
     rate(1/dt)
 
-    #rereunning functions 
-    
-    #recalculating constants
-    speed = math.sqrt(vx**2 +vy**2)
-    F_drag_x, F_drag_y = drag_force(vx,vy,speed,t)
-    Thrust_x = motor['Thrust'](t) * vx/speed
-    Thrust_y = motor['Thrust'](t) *vy/speed
-    x_CG, total_mass , x_CG_tube, x_CG_fins, x_CG_motor, x_CG_NC = calc_CG(t)
-    Fg_y = -total_mass * g
+    x,y,vx,vy,theta,omega = rk4ing(x,y,vx,vy,theta,omega,t)
 
-    FX_tot = F_drag_x + Thrust_x
-    FY_tot = F_drag_y +Thrust_y + Fg_y
     t = t + dt
 
-F_tot
 
 #after burn time+delay charge jsut model a lump of mass and a parachute since nothing else really matters
