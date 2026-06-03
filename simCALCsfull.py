@@ -110,8 +110,9 @@ def build_motor(df, mass_prop, mass_dry,name,motor_length):
             return 0
         else:
             return float(np.interp(time, time_arr, cumalative_mass_lost))
-    
-    return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'dm': dm ,'drymass': mass_dry, 'propmass': mass_prop, 'length': motor_length}
+    mass = mass_dry +mass_prop
+
+    return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'dm': dm ,'mass': mass, 'length': motor_length}
 
 motor_data = [ build_motor(df, mass_prop, mass_dry,name) for df,mass_prop, mass_dry, name, length in zip(motors, prop_masses, dry_masses, labels, motor_lengths)]
 
@@ -127,12 +128,12 @@ def calc_CG(time):
     x_CG_NC = (3/4) * (NC_length)
     x_CG_PC = NC_length
 
-    mass_motor = motor['drymass'] + motor['propmass'] - motor['dm'](time) 
+    mass_motor = motor['mass'] - motor['dm'](time) 
 
     total_mass = mass_motor + BT_mass + F_mass + NC_mass +PC_mass
     x_CG = (x_CG_tube * BT_mass + x_CG_fins * F_mass + x_CG_motor * mass_motor + x_CG_NC * NC_mass + x_CG_PC * PC_mass)/ total_mass 
 
-    return x_CG, total_mass
+    return x_CG, total_mass , x_CG_tube, x_CG_fins, x_CG_motor, x_CG_NC
 
 def calc_CP(t):
     if NC_shape == "Ogive":
@@ -193,8 +194,42 @@ def drag_force(vx,vy, speed,time):
         return -F * (vx/speed), -F *(vy/speed)
 
 #normal force 
+def normal_force(vx,vy,speed,theta):
+        rocket_ax = math.sin(theta)
+        rocket_ay = math.cos(theta)
+        perp_x = math.cos(theta)
+        perp_y = -math.sin(theta)
 
-#moment of inertia 
+        vrel_x = wind_VX - vx
+        vrel_y = wind_VY -vy
+        vrel_along = vrel_x*rocket_ax + vrel_y*rocket_ay
+        vrel_perp  = vrel_x*perp_x   + vrel_y*perp_y
+        vrel_mag   = math.sqrt(vrel_x**2 + vrel_y**2)
+
+        alpha = math.atan2(vrel_perp, vrel_along)
+
+        x_CP, C_N_total = calc_CP()
+        F_N = 0.5 * rho * vrel_mag**2 * C_N_total * alpha * A_ref
+
+        return F_N * perp_x, F_N * perp_y
+
+#moment of inertia about the CG
+def calc_IN(t):
+    x_CG, total_mass , x_CG_tube, x_CG_fins, x_CG_motor, x_CG_NC = calc_CG(t)
+    BT_I_self = BT_mass * (3*(BT_dia/2)**2 + BT_length**2)/12
+    BT_I = BT_I_self + BT_mass * (x_CG_tube -x_CG)**2 #look at that super cool parrallel axis theorem magic
+
+    NC_I_self = NC_mass * (3*(BT_dia/2)**2/20 + NC_length**2/10)
+    NC_I = NC_I_self + NC_mass * (x_CG_NC - x_CG)**2
+
+    F_I_self = F_mass * #ill do ltr
+
+    # I_fin_own = m_f * (state["fin_a"]**2 + state["fin_s"]**2) / 12
+    # I_fins = I_fin_own + m_f * (x_f - x_CG)**2
+
+    motor_I = motor['mass'] * ((BT_dia/2)**2/4+(0.07**2)/12) + motor['mass'] * (x_CG_motor-x_CG)**2
+
+    return motor_I + BT_I +NC_I + F_I_self
 
 #wind force 
 
@@ -212,8 +247,8 @@ while sim_mode:
     F_drag_x, F_drag_y = drag_force(vx,vy,speed,t)
     Thrust_x = motor['Thrust'](t) * vx/speed
     Thrust_y = motor['Thrust'](t) *vy/speed
-    x_CG, mass = calc_CG(t)
-    Fg_y = -mass * g
+    x_CG, total_mass , x_CG_tube, x_CG_fins, x_CG_motor, x_CG_NC = calc_CG(t)
+    Fg_y = -total_mass * g
 
     FX_tot = F_drag_x + Thrust_x
     FY_tot = F_drag_y +Thrust_y + Fg_y
