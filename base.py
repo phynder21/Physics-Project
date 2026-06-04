@@ -10,11 +10,11 @@ TABS = ["Nosecone", "Body Tube", "Fins", "Motor", "Parachute"]
 # Starting configurations for each tab
 DEFAULTS = dict(
     tab="Nosecone",
-    nc_length=1.0,  nc_type="Parabolic",
-    bt_length=4.0,  bt_diameter=0.5,
-    fin_a=1.0,  fin_b=0.5,  fin_s=0.8,  fin_n=4,  fin_m=0.2,
-    motor_type="D12",  motor_delay=5.0,
-    para_shroud=1.0,  para_canopy=0.5,
+    nc_length = 1.0,  nc_type="Parabolic",
+    bt_length = 4.0,  bt_diameter = 0.5,
+    fin_a = 0.3,  fin_b = 0.15,  fin_s = 0.3,  fin_n=4,  fin_m=0.1,
+    motor_type="D12",  motor_delay = 5.0,
+    para_shroud = 1.0,  para_canopy = 0.5,
 )
 state = dict(DEFAULTS)
 
@@ -55,14 +55,14 @@ def draw_ui():
     # nosecone
     if active_tab == "Nosecone":
         scene.append_to_caption("  <b>Length</b>  ")
-        s = slider(min=0.1, max=5.0, value=state["nc_length"], bind=on_slider_change)
+        s = slider(min = 0.1, max = 5.0, value=state["nc_length"], bind = on_slider_change)
         s.key_name = "nc_length"
         scene.append_to_caption("\n\n")
         
         scene.append_to_caption("  <b>Type</b>  ")
         for opt in ["Parabolic", "Ogive", "Conical"]:
             lbl = " [" + opt + "] " if state["nc_type"] == opt else "  " + opt + "  "
-            b = button(text=lbl, bind=on_option_click)
+            b = button(text = lbl, bind = on_option_click)
             b.key_name = "nc_type"
             b.opt_value = opt
         scene.append_to_caption("\n")
@@ -70,51 +70,52 @@ def draw_ui():
     # body tube
     elif active_tab == "Body Tube":
         scene.append_to_caption("  <b>Length</b>  ")
-        s = slider(min=0.1, max=10.0, value=state["bt_length"], bind=on_slider_change)
+        s = slider(min = 0.1, max = 10.0, value = state["bt_length"], bind = on_slider_change)
         s.key_name = "bt_length"
         scene.append_to_caption("\n\n")
         
         scene.append_to_caption("  <b>Diameter</b>  ")
-        s = slider(min=0.1, max=5.0, value=state["bt_diameter"], bind=on_slider_change)
+        s = slider(min = 0.1, max = 5.0, value = state["bt_diameter"], bind = on_slider_change)
         s.key_name = "bt_diameter"
         scene.append_to_caption("\n")
 
     # fins
     elif active_tab == "Fins":
-        a = state["fin_a"]
-        b = state["fin_b"]
-        m = state["fin_m"]
-
-        
-        b_max = max(0.006, a - m - 0.005)
-        m_max = max(0.001, a - b - 0.005)
-        state["fin_b"] = min(state["fin_b"], b_max)
-        state["fin_m"] = min(state["fin_m"], m_max)
-        b = state["fin_b"]
-        m = state["fin_m"]
 
         scene.append_to_caption("  <b>a (root chord)</b>  ")
-        s = slider(min=0.03, max=1.0, value=state["fin_a"], bind=on_slider_change)
-        s.key_name = "fin_a"
-        wtext(text='  {:.3f} m'.format(state["fin_a"]))
+        wt_a = wtext(text='  {:.2f} m'.format(state["fin_a"]))
+        scene.append_to_caption("\n")
+        def on_fin_a(s):
+            state["fin_a"] = s.value
+            wt_a.text = '  {:.2f} m'.format(s.value)
+        s = slider(min = 0.1, max = 0.5, value = state["fin_a"], bind = on_fin_a)
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>b (tip chord)</b>  ")
-        s = slider(min=0.005, max=b_max, value=state["fin_b"], bind=on_slider_change)
-        s.key_name = "fin_b"
-        wtext(text='  {:.3f} m'.format(state["fin_b"]))
+        wt_b = wtext(text='  {:.2f} m'.format(state["fin_b"]))
+        scene.append_to_caption("\n")
+        def on_fin_b(s):
+            state["fin_b"] = s.value
+            wt_b.text = '  {:.2f} m'.format(s.value)
+        s = slider(min = 0.05, max = 0.5, value = state["fin_b"], bind = on_fin_b)
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>s (semi-span)</b>  ")
-        s = slider(min=0.01, max=1.0, value=state["fin_s"], bind=on_slider_change)
-        s.key_name = "fin_s"
-        wtext(text='  {:.3f} m'.format(state["fin_s"]))
+        wt_s = wtext(text='  {:.2f} m'.format(state["fin_s"]))
+        scene.append_to_caption("\n")
+        def on_fin_s(s):
+            state["fin_s"] = s.value
+            wt_s.text = '  {:.2f} m'.format(s.value)
+        sl = slider(min = 0.1, max = 0.5, value = state["fin_s"], bind = on_fin_s)
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>m (sweep offset)</b>  ")
-        s = slider(min=0.0, max=m_max, value=state["fin_m"], bind=on_slider_change)
-        s.key_name = "fin_m"
-        wtext(text='  {:.3f} m'.format(state["fin_m"]))
+        wt_m = wtext(text='  {:.2f} m'.format(state["fin_m"]))
+        scene.append_to_caption("\n")
+        def on_fin_m(s):
+            state["fin_m"] = s.value
+            wt_m.text = '  {:.2f} m'.format(s.value)
+        sl = slider(min = 0.0, max = 0.5, value = state["fin_m"], bind = on_fin_m)
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>Number of Fins</b>  ")
@@ -123,33 +124,6 @@ def draw_ui():
             b = button(text=lbl, bind=on_option_click)
             b.key_name = "fin_n"
             b.opt_value = opt
-        scene.append_to_caption("\n")
-
-    # motor
-    elif active_tab == "Motor":
-        scene.append_to_caption("  <b>Motor type</b>  ")
-        for opt in ["C6", "D12", "F15"]:
-            lbl = " [" + opt + "] " if state["motor_type"] == opt else "  " + opt + "  "
-            b = button(text=lbl, bind=on_option_click)
-            b.key_name = "motor_type"
-            b.opt_value = opt
-        scene.append_to_caption("\n\n")
-        
-        scene.append_to_caption("  <b>Delay Charge</b>  ")
-        s = slider(min=0, max=15, value=state["motor_delay"], bind=on_slider_change)
-        s.key_name = "motor_delay"
-        scene.append_to_caption("\n")
-
-    # parachute
-    elif active_tab == "Parachute":
-        scene.append_to_caption("  <b>Shroud line length</b>  ")
-        s1 = slider(min=0.1, max=5.0, value=state["para_shroud"], bind=on_slider_change)
-        s1.key_name = "para_shroud"
-        scene.append_to_caption("\n\n")
-        
-        scene.append_to_caption("  <b>Canopy diameter</b>  ")
-        s2 = slider(min=0.1, max=3.0, value=state["para_canopy"], bind=on_slider_change)
-        s2.key_name = "para_canopy"
         scene.append_to_caption("\n")
 
     
