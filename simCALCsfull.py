@@ -10,19 +10,21 @@ wind_angle = 30
 wind_VX = wind_V  * math.cos(math.radians(wind_angle))
 wind_VY = wind_V  * math.sin(math.radians(wind_angle))
 
+apogee = 0
+
 #BODY TUBE
-BT_length = 15.0
-BT_dia = 4.0
-BT_density = 2.0
+BT_length = 0.4
+BT_dia = 0.056
+BT_density = 0.68 * 1000
 BT_mass = math.pi * 2 * BT_dia/2 * BT_length* BT_density * 0.003
 
 #FINS
-F_root = 4.0
-F_tip = 5.0
-F_span = 2.0
-F_sweep = 3.0
+F_root = 0.095
+F_tip = 0.06
+F_span = 0.08
+F_sweep = 0.036
 F_num = 4
-F_density =2.0
+F_density = 1.25 * 1000
 F_thickness = 0.003
 
 F_mass = F_num * (((0.5) * (F_root +F_tip)*F_span) *F_thickness *F_density)
@@ -30,8 +32,8 @@ F_mass = F_num * (((0.5) * (F_root +F_tip)*F_span) *F_thickness *F_density)
 #F_mass 
 #NOSE
 NC_shape = "Parabolic" #("Ogive", "Parabolic", "Conical")
-NC_length = 3.0
-NC_density = 2.0
+NC_length = 0.13
+NC_density = 1.25 * 1000
 NC_thickness =0.003
 
 if NC_shape == "Conical":
@@ -54,8 +56,8 @@ if NC_shape == "Parabolic":
 NC_mass = NC_area * NC_thickness * NC_density
 
 #PARACHUTE 
-PC_line = 6.0
-PC_diam = 15 
+PC_line = 0.457
+PC_diam = 0.456 
 PC_density = 0.06
 PC_mass = (math.pi * (PC_diam/2)**2) * PC_density
 
@@ -71,13 +73,13 @@ A_ref = math.pi * (BT_dia/2)**2
 g=9.81
 rho = 1.225
 mu = 1.81e-5
-dt =0.01
+dt = 0.01
 sim_mode = False
 
 #global vars
 t=0
 x = 0
-y = 0
+y = 0.0
 vx = 0
 vy = 0
 theta = 0
@@ -113,10 +115,11 @@ def build_motor(df, mass_prop, mass_dry,name,motor_length):
     def thrust(time):
         return float(np.interp(time, time_arr, Thrust_arr))
     def dm(time):
-        if time <= 0 or time >= burn_time:
-            return 0
-        else:
-            return float(np.interp(time, time_arr, cumalative_mass_lost))
+        if time <= 0:
+            return 0.0
+        if time >= burn_time:
+            return float(cumalative_mass_lost[-1])
+        return float(np.interp(time, time_arr, cumalative_mass_lost))
     mass = mass_dry +mass_prop
 
     return {'name': name, 'v_e': v_e, 'burn_time': burn_time, 'thrust': thrust, 'dm': dm ,'mass': mass, 'length': motor_length}
@@ -200,25 +203,29 @@ def drag_force(vx,vy, speed,time):
         F = 0.5 * rho * speed**2 *CD * A_ref
         return -F * (vx/speed), -F *(vy/speed)
 
-#normal force 
+#normal force
 def normal_force(vx,vy,speed,theta,t):
         rocket_ax = math.sin(theta)
         rocket_ay = math.cos(theta)
         perp_x = math.cos(theta)
         perp_y = -math.sin(theta)
 
-        vrel_x = wind_VX - vx
-        vrel_y = wind_VY -vy
-        vrel_along = vrel_x*rocket_ax + vrel_y*rocket_ay
-        vrel_perp  = vrel_x*perp_x   + vrel_y*perp_y
-        vrel_mag   = math.sqrt(vrel_x**2 + vrel_y**2)
+        vfs_x = vx - wind_VX
+        vfs_y = vy - wind_VY
+        vfs_mag = math.sqrt(vfs_x**2 + vfs_y**2)
+        if vfs_mag < 0.1:
+            return 0.0, 0.0, 0.0
 
-        alpha = math.atan2(vrel_perp, vrel_along)
+        vfs_along = vfs_x*rocket_ax + vfs_y*rocket_ay
+        vfs_perp  = vfs_x*perp_x   + vfs_y*perp_y
 
-        x_CP, C_N_total = calc_CP(t)
-        F_N = 0.5 * rho * vrel_mag**2 * C_N_total * alpha * A_ref
+        alpha = math.atan2(vfs_perp, vfs_along)
+        alpha = max(-0.35, min(0.35, alpha))
 
-        return F_N * perp_x, F_N * perp_y
+        _, C_N_total = calc_CP()
+        F_N_signed = -0.5 * rho * vfs_mag**2 * C_N_total * alpha * A_ref
+
+        return F_N_signed * perp_x, F_N_signed * perp_y, F_N_signed
 
 #moment of inertia about the CG
 def calc_IN(t):
@@ -240,12 +247,12 @@ def calc_IN(t):
 #rk4 --> updating acceleration --> updating velcity, height, pitch, vertical velocity, roll, horizontal dist)
 #
 
-def Accels(x,y, vx,vy, theta, omega,t):
+def launchaccels(x,y, vx,vy, theta, omega,t):
     speed = math.sqrt(vx**2 +vy**2)
     x_CG, total_mass, __, __, __, __ = calc_CG(t)
-    x_CP, __ = calc_CP(t)
+    x_CP, __ = calc_CP()
 
-    F_N_x, F_N_y = normal_force(vx,vy,speed, theta)
+    F_N_x, F_N_y, F_N_signed = normal_force(vx,vy,speed, theta,t)
     F_drag_x, F_drag_y = drag_force(vx,vy,speed,t)
     Thrust_x = motor['thrust'](t) * math.sin(theta)
     Thrust_y = motor['thrust'](t) * math.cos(theta)
@@ -253,15 +260,18 @@ def Accels(x,y, vx,vy, theta, omega,t):
 
     ax = (Thrust_x + F_drag_x +F_N_x)/total_mass
     ay = (Thrust_y + F_drag_y +F_N_y + Fg_y)/total_mass
-    F_N = math.sqrt(F_N_x**2 + F_N_y**2)
-    torque = F_N * (x_CP - x_CG)
-    a_roll = torque/calc_IN(t) 
+    torque = F_N_signed * (x_CP - x_CG)
+    a_roll = torque/calc_IN(t)
 
+    print(f'thrustx: {Thrust_x} thrusty: {Thrust_y} dragx: {F_drag_x} dragy: {F_drag_y} normalx: {F_N_x} normaly: {F_N_y} F_g : {Fg_y}')
+    print(f'ax: {ax} ay: {ay} a_roll {a_roll}')
     return ax,ay, a_roll
+
 
 def rk4ing(x,y,vx,vy,theta,omega,t):
     #ok lets skip on the rk4 for simplicity for now 
-    ax,ay, a_roll = Accels(x,y, vx,vy, theta, omega,t)
+    
+    ax,ay, a_roll = launchaccels(x,y, vx,vy, theta, omega,t)
 
     vx = vx + ax *dt
     vy = vy + ay*dt
@@ -273,12 +283,26 @@ def rk4ing(x,y,vx,vy,theta,omega,t):
 
     return x,y,vx,vy,theta,omega
 
-while sim_mode:
+launched = False
+while True:
     rate(1/dt)
+    t = t + dt
 
     x,y,vx,vy,theta,omega = rk4ing(x,y,vx,vy,theta,omega,t)
 
-    t = t + dt
+    if not launched:
+        if y <= 0:
+            x, y, vx, vy = 0, 0.0, 0, 0
+            continue
+        launched = True
 
+    if y <= 0:
+        break
+
+    apogee = max(y, apogee)
+    if (dt % 0.01 ==0):
+        print(f'x: {x} y: {y} vx: {vx} vy: {vy} theta: {theta} omega: {omega}')
+
+print(f'apogee: {apogee} and time: {t}')
 
 #after burn time+delay charge jsut model a lump of mass and a parachute since nothing else really matters
