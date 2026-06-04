@@ -241,7 +241,7 @@ def launch_accels(vx, vy, theta, t):
     Fg_y = -total_mass * g
     ax = (Thrust_x + F_drag_x + F_N_x) / total_mass
     ay = (Thrust_y + F_drag_y + F_N_y + Fg_y) / total_mass
-    torque = F_N_signed * (x_CP - x_CG)
+    torque = -F_N_signed * (x_CP - x_CG)
     a_roll = torque / calc_IN(t)
     return ax, ay, a_roll
 

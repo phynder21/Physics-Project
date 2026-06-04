@@ -62,7 +62,7 @@ PC_density = 0.06
 PC_mass = (math.pi * (PC_diam/2)**2) * PC_density
 
 #MOTOR 
-motor_sel = "C6"
+motor_sel = "C6" # C6,D12,F15
 motor_dc = 4.0
 
 #general constants 
@@ -239,7 +239,7 @@ def calc_IN(t):
     F_I_self = F_mass * (F_root**2 + F_span**2) / 12
     F_I = F_I_self + F_mass * (x_CG_fins - x_CG)**2
 
-    motor_I = motor['mass'] * ((BT_dia/2)**2/4+(0.07**2)/12) + motor['mass'] * (x_CG_motor-x_CG)**2
+    motor_I = (motor['mass'] - motor['dm'](t)) * ((BT_dia/2)**2/4+(0.07**2)/12) + (motor['mass'] - motor['dm'](t)) * (x_CG_motor-x_CG)**2
 
     return motor_I + BT_I +NC_I + F_I
 
@@ -260,7 +260,7 @@ def launchaccels(x,y, vx,vy, theta, omega,t):
 
     ax = (Thrust_x + F_drag_x +F_N_x)/total_mass
     ay = (Thrust_y + F_drag_y +F_N_y + Fg_y)/total_mass
-    torque = F_N_signed * (x_CP - x_CG)
+    torque = -F_N_signed * (x_CP - x_CG)
     a_roll = torque/calc_IN(t)
 
     print(f'thrustx: {Thrust_x} thrusty: {Thrust_y} dragx: {F_drag_x} dragy: {F_drag_y} normalx: {F_N_x} normaly: {F_N_y} F_g : {Fg_y}')
