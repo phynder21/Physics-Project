@@ -81,17 +81,42 @@ def draw_ui():
 
     # fins
     elif active_tab == "Fins":
-        fin_params = [
-            ("a (root chord)", "fin_a", 0.1, 3.0),
-            ("b (tip chord)",  "fin_b", 0.1, 2.0),
-            ("s (semi-span)",  "fin_s", 0.1, 3.0),
-            ("m (sweep offset)","fin_m", 0.0, 2.0)
-        ]
-        for lbl, key, lo, hi in fin_params:
-            scene.append_to_caption("  <b>" + lbl + "</b>  ")
-            s = slider(min=lo, max=hi, value=state[key], bind=on_slider_change)
-            s.key_name = key
-            scene.append_to_caption("\n\n")
+        a = state["fin_a"]
+        b = state["fin_b"]
+        m = state["fin_m"]
+
+        
+        b_max = max(0.006, a - m - 0.005)
+        m_max = max(0.001, a - b - 0.005)
+        state["fin_b"] = min(state["fin_b"], b_max)
+        state["fin_m"] = min(state["fin_m"], m_max)
+        b = state["fin_b"]
+        m = state["fin_m"]
+
+        scene.append_to_caption("  <b>a (root chord)</b>  ")
+        s = slider(min=0.03, max=1.0, value=state["fin_a"], bind=on_slider_change)
+        s.key_name = "fin_a"
+        wtext(text='  {:.3f} m'.format(state["fin_a"]))
+        scene.append_to_caption("\n\n")
+
+        scene.append_to_caption("  <b>b (tip chord)</b>  ")
+        s = slider(min=0.005, max=b_max, value=state["fin_b"], bind=on_slider_change)
+        s.key_name = "fin_b"
+        wtext(text='  {:.3f} m'.format(state["fin_b"]))
+        scene.append_to_caption("\n\n")
+
+        scene.append_to_caption("  <b>s (semi-span)</b>  ")
+        s = slider(min=0.01, max=1.0, value=state["fin_s"], bind=on_slider_change)
+        s.key_name = "fin_s"
+        wtext(text='  {:.3f} m'.format(state["fin_s"]))
+        scene.append_to_caption("\n\n")
+
+        scene.append_to_caption("  <b>m (sweep offset)</b>  ")
+        s = slider(min=0.0, max=m_max, value=state["fin_m"], bind=on_slider_change)
+        s.key_name = "fin_m"
+        wtext(text='  {:.3f} m'.format(state["fin_m"]))
+        scene.append_to_caption("\n\n")
+
         scene.append_to_caption("  <b>Number of Fins</b>  ")
         for opt in [3, 4, 6]:
             lbl = " [" + str(opt) + "] " if state["fin_n"] == opt else "  " + str(opt) + "  "
@@ -110,7 +135,7 @@ def draw_ui():
             b.opt_value = opt
         scene.append_to_caption("\n\n")
         
-        scene.append_to_caption("  <b>Delay charge</b>  ")
+        scene.append_to_caption("  <b>Delay Charge</b>  ")
         s = slider(min=0, max=15, value=state["motor_delay"], bind=on_slider_change)
         s.key_name = "motor_delay"
         scene.append_to_caption("\n")
@@ -176,6 +201,23 @@ def MakeNosecone(length, diameter):
 
 nosecone = curve(color=color.black)
 
+def makeFin():
+    a = state["fin_a"]
+    b = state["fin_b"]
+    s = state["fin_s"]
+    m = state["fin_m"]
+    bt_bottom = -state["bt_length"] / 2
+    r = state["bt_diameter"] / 2
+
+    p1 = vector(r,     bt_bottom,           0)
+    p2 = vector(r,     bt_bottom + a,       0)
+    p3 = vector(r + s, bt_bottom + a - m,   0)
+    p4 = vector(r + s, bt_bottom + a - m - b, 0)
+
+    return [p1, p2, p3, p4, p1]
+
+fin = curve(color=color.black)
+
 draw_ui()
 
 while True:
@@ -186,6 +228,9 @@ while True:
     nosecone.clear()
     for p in MakeNosecone(state["nc_length"], state["bt_diameter"]):
         nosecone.append(p)
+    fin.clear()
+    for p in makeFin():
+        fin.append(p)
 
 while True:
     rate(10)
