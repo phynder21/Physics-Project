@@ -13,16 +13,16 @@ wind_VY = wind_V  * math.sin(math.radians(wind_angle))
 apogee = 0
 
 #BODY TUBE
-BT_length = 0.4
+BT_length = 0.15
 BT_dia = 0.056
 BT_density = 0.68 * 1000
 BT_mass = math.pi * 2 * BT_dia/2 * BT_length* BT_density * 0.003
 
 #FINS
-F_root = 0.095
-F_tip = 0.06
-F_span = 0.08
-F_sweep = 0.036
+F_root = 0.07
+F_tip = 0.03
+F_span = 0.02
+F_sweep = 0.01
 F_num = 4
 F_density = 1.25 * 1000
 F_thickness = 0.003
@@ -32,7 +32,7 @@ F_mass = F_num * (((0.5) * (F_root +F_tip)*F_span) *F_thickness *F_density)
 #F_mass 
 #NOSE
 NC_shape = "Parabolic" #("Ogive", "Parabolic", "Conical")
-NC_length = 0.13
+NC_length = 0.1
 NC_density = 1.25 * 1000
 NC_thickness =0.003
 

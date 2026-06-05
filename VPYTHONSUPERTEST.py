@@ -453,7 +453,7 @@ def draw_ui():
         scene.append_to_caption("  <b>Wind Angle</b>  ")
         s2 = slider(min=-60.0, max=60.0, value=state["wind_angle"], bind=on_slider_change)
         s2.key_name = "wind_angle"
-        wtext(text='  {:.3f} m'.format(state["wind_angle"]))
+        wtext(text='  {:.3f} rad'.format(state["wind_angle"]))
         scene.append_to_caption("\n")
 
     scene.append_to_caption("<hr style='margin: 15px 0;'>")
