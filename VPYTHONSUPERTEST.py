@@ -323,6 +323,11 @@ def on_launch(b):
     mode = "launch"
     draw_ui()
 
+def on_back_to_design(b):
+    global mode
+    mode = "design"
+    draw_ui()
+
 def on_reset(b):
     global mode
     state.update(DEFAULTS)
@@ -341,7 +346,7 @@ def draw_ui():
         time_lbl   = wtext(text="Time:   0.000 s\n")
         scene.append_to_caption("\n\n")
         scene.append_to_caption("<hr style='margin: 15px 0;'>")
-        b = button(text="Back to design", bind=on_reset)
+        b = button(text="Back to design", bind=on_back_to_design)
         scene.append_to_caption("</div>")
         return
 
