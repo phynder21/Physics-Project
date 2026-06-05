@@ -1,4 +1,4 @@
-from vpython import *
+Web VPython 3.2
 
 c6_time   = [0.0, 0.014, 0.026, 0.067, 0.099, 0.15, 0.183, 0.207, 0.219, 0.262,
              0.333, 0.349, 0.392, 0.475, 0.653, 0.913, 1.366, 1.607, 1.745, 1.978,
@@ -46,19 +46,17 @@ scene.background = color.white
 scene.title  = "Rocket Simulator\n"
 scene.range  = 0.4
 
-# === Physics constants ===
 g = 9.81
 rho_air = 1.225
 mu = 1.81e-5
 dt = 0.01
 
-wind_V = 3.0
-wind_angle = 30
-wind_VX = wind_V * cos(radians(wind_angle))
-wind_VY = wind_V * sin(radians(wind_angle))
+# wind_V = 3.0
+# wind_angle = 30
+# wind_VX = wind_V * cos(radians(wind_angle))
+# wind_VY = wind_V * sin(radians(wind_angle))
 
-# === UI state ===
-TABS = ["Nosecone", "Body Tube", "Fins", "Motor", "Parachute"]
+TABS = ["Nosecone", "Body Tube", "Fins", "Motor", "Parachute", "Wind"]
 DEFAULTS = dict(
     tab="Nosecone",
     nc_length=0.13,  nc_type="Parabolic",
@@ -66,6 +64,7 @@ DEFAULTS = dict(
     fin_a=0.095, fin_b=0.060, fin_s=0.080, fin_n=4, fin_m=0.036,
     motor_type="C6", motor_delay=4.0,
     para_shroud=0.457, para_canopy=0.456,
+    wind_angle = 30, wind_mag = 3.0
 )
 state = dict(DEFAULTS)
 mode = "design"
@@ -234,6 +233,10 @@ def drag_force(vx, vy, speed, t):
 def normal_force(vx, vy, theta):
     rocket_ax = sin(theta); rocket_ay = cos(theta)
     perp_x = cos(theta);    perp_y = -sin(theta)
+    wind_V = state['wind_mag']
+    wind_angle = state['wind_angle']
+    wind_VX = wind_V * cos(radians(wind_angle))
+    wind_VY = wind_V * sin(radians(wind_angle))
     vfs_x = vx - wind_VX
     vfs_y = vy - wind_VY
     vfs_mag = sqrt(vfs_x**2 + vfs_y**2)
@@ -439,6 +442,18 @@ def draw_ui():
         s2 = slider(min=0.1, max=1.0, value=state["para_canopy"], bind=on_slider_change)
         s2.key_name = "para_canopy"
         wtext(text='  {:.3f} m'.format(state["para_canopy"]))
+        scene.append_to_caption("\n")
+    
+    elif active =="Wind":
+        scene.append_to_caption("  <b>Wind Magnitude</b>  ")
+        s1 = slider(min=0.1, max=1.0, value=state["wind_mag"], bind=on_slider_change)
+        s1.key_name = "wind_mag"
+        wtext(text='  {:.3f} m'.format(state["wind_mag"]))
+        scene.append_to_caption("\n\n")
+        scene.append_to_caption("  <b>Wind Angle</b>  ")
+        s2 = slider(min=-60.0, max=60.0, value=state["wind_angle"], bind=on_slider_change)
+        s2.key_name = "wind_angle"
+        wtext(text='  {:.3f} m'.format(state["wind_angle"]))
         scene.append_to_caption("\n")
 
     scene.append_to_caption("<hr style='margin: 15px 0;'>")

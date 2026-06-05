@@ -3,7 +3,6 @@ import numpy as np
 import math
 from vpython import *
 
-# === Scene setup ===
 scene.align = "left"
 scene.width  = 450
 scene.height = 550
@@ -11,7 +10,6 @@ scene.background = color.white
 scene.title  = "Rocket Simulator\n"
 scene.range  = 0.4
 
-# === Physics constants ===
 g = 9.81
 rho_air = 1.225
 mu = 1.81e-5
@@ -22,7 +20,6 @@ wind_angle = 30
 wind_VX = wind_V * math.cos(math.radians(wind_angle))
 wind_VY = wind_V * math.sin(math.radians(wind_angle))
 
-# === UI state ===
 TABS = ["Nosecone", "Body Tube", "Fins", "Motor", "Parachute"]
 DEFAULTS = dict(
     tab="Nosecone",
