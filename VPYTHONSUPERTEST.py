@@ -325,6 +325,11 @@ def on_launch(b):
     mode = "launch"
     draw_ui()
 
+def on_back_to_design(b):
+    global mode
+    mode = "design"
+    draw_ui()
+
 def on_reset(b):
     global mode
     state.update(DEFAULTS)
@@ -343,7 +348,7 @@ def draw_ui():
         time_lbl   = wtext(text="Time:   0.000 s\n")
         scene.append_to_caption("\n\n")
         scene.append_to_caption("<hr style='margin: 15px 0;'>")
-        b = button(text="Back to design", bind=on_reset)
+        b = button(text="Back to design", bind=on_back_to_design)
         scene.append_to_caption("</div>")
         return
 
@@ -432,6 +437,7 @@ def draw_ui():
         scene.append_to_caption("  <b>Delay Charge</b>  ")
         s = slider(min=0, max=15, value=state["motor_delay"], bind=on_slider_change)
         s.key_name = "motor_delay"
+        wtext(text='  {:.1f} s'.format(state["motor_delay"]))
         scene.append_to_caption("\n")
 
     elif active == "Parachute":
@@ -450,7 +456,7 @@ def draw_ui():
         scene.append_to_caption("  <b>Wind Magnitude</b>  ")
         s1 = slider(min=0.1, max=1.0, value=state["wind_mag"], bind=on_slider_change)
         s1.key_name = "wind_mag"
-        wtext(text='  {:.3f} m'.format(state["wind_mag"]))
+        wtext(text='  {:.3f} m/s'.format(state["wind_mag"]))
         scene.append_to_caption("\n\n")
         scene.append_to_caption("  <b>Wind Angle</b>  ")
         s2 = slider(min=-60.0, max=60.0, value=state["wind_angle"], bind=on_slider_change)
