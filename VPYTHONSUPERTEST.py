@@ -69,6 +69,7 @@ DEFAULTS = dict(
     wind_angle = 30, wind_mag = 3.0
 )
 state = dict(DEFAULTS)
+slider_labels = {}
 mode = "design"
 flight = {}
 height_lbl = None
@@ -310,6 +311,16 @@ def on_tab_click(b):
 
 def on_slider_change(s):
     state[s.key_name] = s.value
+    if s.key_name in slider_labels:
+        lbl = slider_labels[s.key_name]
+        if s.key_name in ("nc_length","bt_length","bt_diameter","fin_a","fin_b","fin_s","fin_m","para_shroud","para_canopy"):
+            lbl.text = '  {:.3f} m'.format(s.value)
+        elif s.key_name == "motor_delay":
+            lbl.text = '  {:.1f} s'.format(s.value)
+        elif s.key_name == "wind_mag":
+            lbl.text = '  {:.3f} m/s'.format(s.value)
+        elif s.key_name == "wind_angle":
+            lbl.text = '  {:.3f} rad'.format(s.value)
 
 def on_option_click(b):
     state[b.key_name] = b.opt_value
@@ -365,7 +376,7 @@ def draw_ui():
         scene.append_to_caption("  <b>Length</b>  ")
         s = slider(min=0.05, max=0.3, value=state["nc_length"], bind=on_slider_change)
         s.key_name = "nc_length"
-        wtext(text='  {:.3f} m'.format(state["nc_length"]))
+        slider_labels["nc_length"] = wtext(text='  {:.3f} m'.format(state["nc_length"]))
         scene.append_to_caption("\n\n")
         scene.append_to_caption("  <b>Type</b>  ")
         for opt in ["Parabolic", "Ogive", "Conical"]:
@@ -379,12 +390,12 @@ def draw_ui():
         scene.append_to_caption("  <b>Length</b>  ")
         s = slider(min=0.1, max=1.0, value=state["bt_length"], bind=on_slider_change)
         s.key_name = "bt_length"
-        wtext(text='  {:.3f} m'.format(state["bt_length"]))
+        slider_labels["bt_length"] = wtext(text='  {:.3f} m'.format(state["bt_length"]))
         scene.append_to_caption("\n\n")
         scene.append_to_caption("  <b>Diameter</b>  ")
         s = slider(min=0.02, max=0.15, value=state["bt_diameter"], bind=on_slider_change)
         s.key_name = "bt_diameter"
-        wtext(text='  {:.3f} m'.format(state["bt_diameter"]))
+        slider_labels["bt_diameter"] = wtext(text='  {:.3f} m'.format(state["bt_diameter"]))
         scene.append_to_caption("\n")
 
     elif active == "Fins":
@@ -397,30 +408,30 @@ def draw_ui():
         scene.append_to_caption("  <b>a (root chord)</b>  ")
         s = slider(min=0.03, max=0.20, value=state["fin_a"], bind=on_slider_change)
         s.key_name = "fin_a"
-        wtext(text='  {:.3f} m'.format(state["fin_a"]))
+        slider_labels["fin_a"] = wtext(text='  {:.3f} m'.format(state["fin_a"]))
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>b (tip chord)</b>  ")
         s = slider(min=0.005, max=b_max, value=state["fin_b"], bind=on_slider_change)
         s.key_name = "fin_b"
-        wtext(text='  {:.3f} m'.format(state["fin_b"]))
+        slider_labels["fin_b"] = wtext(text='  {:.3f} m'.format(state["fin_b"]))
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>s (semi-span)</b>  ")
         s = slider(min=0.01, max=0.15, value=state["fin_s"], bind=on_slider_change)
         s.key_name = "fin_s"
-        wtext(text='  {:.3f} m'.format(state["fin_s"]))
+        slider_labels["fin_s"] = wtext(text='  {:.3f} m'.format(state["fin_s"]))
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>m (sweep offset)</b>  ")
         s = slider(min=0.0, max=m_max, value=state["fin_m"], bind=on_slider_change)
         s.key_name = "fin_m"
-        wtext(text='  {:.3f} m'.format(state["fin_m"]))
+        slider_labels["fin_m"] = wtext(text='  {:.3f} m'.format(state["fin_m"]))
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>Number of Fins</b>  ")
         for opt in [3, 4, 6]:
-            lbl = " [" + str(opt) + "] " if state["fin_n"] == opt else "  " + str(opt) + "  "
+            lbl = " [" + opt + "] " if state["fin_n"] == opt else "  " + str(opt) + "  "
             b = button(text=lbl, bind=on_option_click)
             b.key_name = "fin_n"
             b.opt_value = opt
@@ -437,31 +448,31 @@ def draw_ui():
         scene.append_to_caption("  <b>Delay Charge</b>  ")
         s = slider(min=0, max=15, value=state["motor_delay"], bind=on_slider_change)
         s.key_name = "motor_delay"
-        wtext(text='  {:.1f} s'.format(state["motor_delay"]))
+        slider_labels["motor_delay"] = wtext(text='  {:.1f} s'.format(state["motor_delay"]))
         scene.append_to_caption("\n")
 
     elif active == "Parachute":
         scene.append_to_caption("  <b>Shroud line length</b>  ")
         s1 = slider(min=0.1, max=1.0, value=state["para_shroud"], bind=on_slider_change)
         s1.key_name = "para_shroud"
-        wtext(text='  {:.3f} m'.format(state["para_shroud"]))
+        slider_labels["para_shroud"] = wtext(text='  {:.3f} m'.format(state["para_shroud"]))
         scene.append_to_caption("\n\n")
         scene.append_to_caption("  <b>Canopy diameter</b>  ")
         s2 = slider(min=0.1, max=1.0, value=state["para_canopy"], bind=on_slider_change)
         s2.key_name = "para_canopy"
-        wtext(text='  {:.3f} m'.format(state["para_canopy"]))
+        slider_labels["para_canopy"] = wtext(text='  {:.3f} m'.format(state["para_canopy"]))
         scene.append_to_caption("\n")
-    
-    elif active =="Wind":
+
+    elif active == "Wind":
         scene.append_to_caption("  <b>Wind Magnitude</b>  ")
-        s1 = slider(min=0.1, max=1.0, value=state["wind_mag"], bind=on_slider_change)
+        s1 = slider(min=0.1, max=20.0, value=state["wind_mag"], bind=on_slider_change)
         s1.key_name = "wind_mag"
-        wtext(text='  {:.3f} m/s'.format(state["wind_mag"]))
+        slider_labels["wind_mag"] = wtext(text='  {:.3f} m/s'.format(state["wind_mag"]))
         scene.append_to_caption("\n\n")
         scene.append_to_caption("  <b>Wind Angle</b>  ")
         s2 = slider(min=-60.0, max=60.0, value=state["wind_angle"], bind=on_slider_change)
         s2.key_name = "wind_angle"
-        wtext(text='  {:.3f} rad'.format(state["wind_angle"]))
+        slider_labels["wind_angle"] = wtext(text='  {:.3f} deg'.format(state["wind_angle"]))
         scene.append_to_caption("\n")
 
     scene.append_to_caption("<hr style='margin: 15px 0;'>")
