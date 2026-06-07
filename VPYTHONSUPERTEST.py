@@ -1,4 +1,6 @@
 Web VPython 3.2
+scene.userzoom = False
+
 
 c6_time   = [0.0, 0.014, 0.026, 0.067, 0.099, 0.15, 0.183, 0.207, 0.219, 0.262,
              0.333, 0.349, 0.392, 0.475, 0.653, 0.913, 1.366, 1.607, 1.745, 1.978,
@@ -603,3 +605,8 @@ while True:
             height_lbl.text = "Height: {:.3f} m  (apogee {:.3f} m)\n".format(flight['y'], flight['apogee'])
         if time_lbl is not None:
             time_lbl.text   = "Time:   {:.3f} s\n".format(flight['t'])
+        if height_lbl is not None and time_lbl is not None:
+            gPhasePlot = graph(title="Phase Space", xtitle="Position", ytitle="Velocity")
+            gPhase = gcurve(color=color.blue) 
+            
+        
