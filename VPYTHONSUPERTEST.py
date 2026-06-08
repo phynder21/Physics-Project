@@ -320,7 +320,7 @@ def on_slider_change(s):
         elif s.key_name == "wind_mag":
             lbl.text = '  {:.3f} m/s'.format(s.value)
         elif s.key_name == "wind_angle":
-            lbl.text = '  {:.3f} rad'.format(s.value)
+            lbl.text = '  {:.3f} deg'.format(s.value)
 
 def on_option_click(b):
     state[b.key_name] = b.opt_value
