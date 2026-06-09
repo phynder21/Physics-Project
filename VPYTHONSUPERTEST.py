@@ -114,6 +114,50 @@ motors_by_name['C6']  = build_motor(c6_time,  c6_thrust,  0.011, 0.013, 'C6',  0
 motors_by_name['D12'] = build_motor(d12_time, d12_thrust, 0.021, 0.023, 'D12', 0.07)
 motors_by_name['F15'] = build_motor(f15_time, f15_thrust, 0.060, 0.042, 'F15', 0.114)
 
+motor_descriptions = {
+    'C6':  "\t A C class motor has a total Impulse between 5 and 10 Newton Seconds \n \n \t The average thrust number of 6 implies it outputs an average of 6 Newtons of thrust\n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
+    'D12': "\t A D class motor has a total Impulse between 10 and 20 Newton Seconds \n \n \t The average thrust number of 12 implies it outputs an average of 12 Newtons of thrust\n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
+    'F15': "\t A F class motor has a total Impulse between 40 and 80 Newton Seconds \n \n \t The average thrust number of 15 implies it outputs an average of 15 Newtons of thrust\n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
+}
+
+def build_thrust_svg(motor_name):
+    m = motors_by_name[motor_name]
+    time_arr   = m['time_arr']
+    thrust_arr = m['thrust_arr']
+    w = 200; h = 130
+    pad_l = 30; pad_r = 10; pad_t = 12; pad_b = 26
+    plot_w = w - pad_l - pad_r
+    plot_h = h - pad_t - pad_b
+    n = time_arr.length
+    t_max = time_arr[n-1]
+    th_max = 0.0
+    for v in thrust_arr:
+        if v > th_max: th_max = v
+    if t_max  <= 0: t_max  = 1.0
+    if th_max <= 0: th_max = 1.0
+
+    x0 = pad_l
+    y0 = pad_t + plot_h
+    x1 = pad_l + plot_w
+
+    pts = ""
+    for i in range(n):
+        x = pad_l + (time_arr[i]/t_max) * plot_w
+        y = pad_t + plot_h - (thrust_arr[i]/th_max) * plot_h
+        pts += "{:.1f},{:.1f} ".format(x, y)
+
+    svg  = "<svg width='{}' height='{}' xmlns='http://www.w3.org/2000/svg' style='background:#fff;'>".format(w, h)
+    svg += "<line x1='{:.1f}' y1='{:.1f}' x2='{:.1f}' y2='{:.1f}' stroke='#000' stroke-width='1'/>".format(x0, pad_t, x0, y0)
+    svg += "<line x1='{:.1f}' y1='{:.1f}' x2='{:.1f}' y2='{:.1f}' stroke='#000' stroke-width='1'/>".format(x0, y0, x1, y0)
+    svg += "<polyline points='{}' fill='none' stroke='#c00' stroke-width='1.5'/>".format(pts)
+    svg += "<text x='{:.1f}' y='{:.1f}' font-size='8' text-anchor='end'>{:.0f}</text>".format(x0-3, pad_t+4, th_max)
+    svg += "<text x='{:.1f}' y='{:.1f}' font-size='8' text-anchor='end'>0</text>".format(x0-3, y0)
+    svg += "<text x='{:.1f}' y='{:.1f}' font-size='8' text-anchor='middle'>{:.1f}</text>".format(x1, y0+11, t_max)
+    svg += "<text x='{:.1f}' y='{:.1f}' font-size='9' text-anchor='middle'>Time (s)</text>".format((x0+x1)/2, h-4)
+    svg += "<text x='8' y='{:.1f}' font-size='9' text-anchor='middle' transform='rotate(-90 8 {:.1f})'>Thrust (N)</text>".format((pad_t+y0)/2, (pad_t+y0)/2)
+    svg += "</svg>"
+    return svg
+
 geom = {}
 
 def compute_geom():
@@ -449,6 +493,18 @@ def draw_ui():
         s = slider(min=0, max=15, value=state["motor_delay"], bind=on_slider_change)
         s.key_name = "motor_delay"
         slider_labels["motor_delay"] = wtext(text='  {:.1f} s'.format(state["motor_delay"]))
+        scene.append_to_caption("\n\n")
+        scene.append_to_caption(
+            "<div style='display: flex; gap: 10px; margin: 5px 0 5px 30px; align-items: stretch;'>"
+            "<div style='flex: 1; padding: 8px; border: 1px solid #ccc; "
+            "background: #f5f5f5; font-size: 13px; white-space: pre-wrap;'>"
+            + motor_descriptions[state["motor_type"]]
+            + "</div>"
+            "<div style='padding: 4px; border: 1px solid #ccc; background: #fff; "
+            "display: flex; align-items: center;'>"
+            + build_thrust_svg(state["motor_type"])
+            + "</div>"
+            "</div>")
         scene.append_to_caption("\n")
 
     elif active == "Parachute":
