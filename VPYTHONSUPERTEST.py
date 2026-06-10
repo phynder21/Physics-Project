@@ -467,6 +467,7 @@ def on_reset(b):
     state.update(DEFAULTS)
     mode = "design"
     scene.range = 0.4
+    randomize_background()
     clear_flight_graphs()
     draw_ui()
 
@@ -736,20 +737,25 @@ cp_marker = sphere(pos=vector(0,0,0), radius=0.008, color=color.blue, visible=Fa
 cg_label  = label(pos=vector(0,0,0), text="CG", color=color.red,  box=False, opacity=0, height=10, visible=False)
 cp_label  = label(pos=vector(0,0,0), text="CP", color=color.blue, box=False, opacity=0, height=10, visible=False)
 
-SKY_URL       = "https://raw.githubusercontent.com/phynder21/Physics-Project/main/sky.jpg"
+BG_BASE       = "https://raw.githubusercontent.com/phynder21/Physics-Project/main/"
+BG_IMAGES = [
+    {"url": BG_BASE + "sky.jpg",    "aspect": 5304/7952},
+    {"url": BG_BASE + "sunset.jpg", "aspect": 4000/6000},
+    {"url": BG_BASE + "night.jpg",  "aspect": 1000/1000},
+]
 GROUND_LEVEL  = -0.22
 IMG_W         = 1.4
-TILE_H        = IMG_W * (5304/7952)   
-NTILES        = 3 
+NTILES        = 3
 BG_Z          = -0.6
-ALT_PER_IMAGE = 120.0 
+ALT_PER_IMAGE = 120.0
+TILE_H        = IMG_W * BG_IMAGES[0]["aspect"]
 BG_SCALE      = TILE_H / ALT_PER_IMAGE
 
 sky_tiles = []
 for _t in range(NTILES):
     sky_tiles.append(box(pos=vector(0, GROUND_LEVEL + (_t + 0.5)*TILE_H, BG_Z),
                          size=vector(IMG_W, TILE_H, 0.005),
-                         texture={'file': SKY_URL, 'mapping': 'sign'},
+                         texture={'file': BG_IMAGES[0]["url"], 'mapping': 'sign'},
                          emissive = True, visible=False))
 
 GROUND_BOX_H = 4.0
@@ -776,6 +782,16 @@ def update_background():
             sky_tiles[j].visible = True
             sky_tiles[j].pos = vector(0, GROUND_LEVEL + (ci + 0.5)*TILE_H - scroll, BG_Z)
     ground_box.pos = vector(0, (GROUND_LEVEL - GROUND_BOX_H/2) - scroll, BG_Z + 0.02)
+
+def randomize_background():
+    global TILE_H, BG_SCALE
+    choice   = BG_IMAGES[int(random() * len(BG_IMAGES))]
+    TILE_H   = IMG_W * choice["aspect"]
+    BG_SCALE = TILE_H / ALT_PER_IMAGE
+    for _t in range(NTILES):
+        sky_tiles[_t].texture = {'file': choice["url"], 'mapping': 'sign'}
+        sky_tiles[_t].size    = vector(IMG_W, TILE_H, 0.005)
+        sky_tiles[_t].pos     = vector(0, GROUND_LEVEL + (_t + 0.5)*TILE_H, BG_Z)
 
 Z_FILL        = -0.005
 NC_FILL_STEPS = 24
@@ -969,6 +985,7 @@ def update_graphs():
         yname = flight_axes[gi][1]
         flight_curves[gi].plot(graph_value(xname), graph_value(yname))
 
+randomize_background()
 draw_ui()
 redraw_design()
 
