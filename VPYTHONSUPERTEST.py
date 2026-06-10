@@ -52,11 +52,6 @@ rho_air = 1.225
 mu = 1.81e-5
 dt = 0.01
 
-# wind_V = 3.0
-# wind_angle = 30
-# wind_VX = wind_V * cos(radians(wind_angle))
-# wind_VY = wind_V * sin(radians(wind_angle))
-
 TABS = ["Nosecone", "Body Tube", "Fins", "Motor", "Parachute", "Wind", "Graphs"]
 GRAPH_VARS = ["Flight time", "Height", "Vertical velocity",
               "Total velocity", "Pitch", "Pitch angular velocity"]
@@ -64,7 +59,7 @@ DEFAULTS = dict(
     tab="Nosecone",
     nc_length=0.13,  nc_type="Parabolic",
     bt_length=0.40,  bt_diameter=0.056,
-    fin_a=0.095, fin_b=0.060, fin_s=0.080, fin_n=4, fin_m=0.036,
+    fin_a=0.095, fin_b=0.060, fin_s=0.080, fin_n=4, fin_m=0.030,
     motor_type="C6", motor_delay=4.0,
     para_shroud=0.457, para_canopy=0.456,
     wind_angle = 30, wind_mag = 3.0,
@@ -313,16 +308,33 @@ def calc_IN(t):
               + G['motor']['mass']*(x_CG_motor-x_CG)**2
     return BT_I + NC_I + F_I + motor_I
 
+PARA_CD = 1.5
+
 def launch_accels(vx, vy, theta, t):
     speed = sqrt(vx**2 + vy**2)
     x_CG, total_mass, _a, _b, _c, _d = calc_CG(t)
-    x_CP, _e = calc_CP()
-    F_N_x, F_N_y, F_N_signed = normal_force(vx, vy, theta)
     F_drag_x, F_drag_y = drag_force(vx, vy, speed, t)
     thrust_mag = motor_thrust(geom['motor'], t)
     Thrust_x = thrust_mag * sin(theta)
     Thrust_y = thrust_mag * cos(theta)
     Fg_y = -total_mass * g
+
+    if flight['chute']:
+        A_chute = pi * (state['para_canopy']/2)**2
+        if speed > 0.01:
+            F_p  = 0.5 * rho_air * speed**2 * PARA_CD * A_chute
+            F_p  = min(F_p, 0.9 * total_mass * speed / dt)
+            Fp_x = -F_p * (vx/speed)
+            Fp_y = -F_p * (vy/speed)
+        else:
+            Fp_x = 0.0; Fp_y = 0.0
+        ax = (Thrust_x + F_drag_x + Fp_x) / total_mass
+        ay = (Thrust_y + F_drag_y + Fp_y + Fg_y) / total_mass
+        a_roll = -18.0 * theta - 9.0 * flight['omega']
+        return ax, ay, a_roll
+
+    x_CP, _e = calc_CP()
+    F_N_x, F_N_y, F_N_signed = normal_force(vx, vy, theta)
     ax = (Thrust_x + F_drag_x + F_N_x) / total_mass
     ay = (Thrust_y + F_drag_y + F_N_y + Fg_y) / total_mass
     torque = -F_N_signed * (x_CP - x_CG)
@@ -333,6 +345,9 @@ def step_sim():
     if flight['done']:
         return
     t = flight['t'] + dt
+    if not flight['chute'] and flight['launched']:
+        if t >= geom['motor']['burn_time'] + state['motor_delay']:
+            flight['chute'] = True
     ax, ay, a_roll = launch_accels(flight['vx'], flight['vy'], flight['theta'], t)
     vx = flight['vx'] + ax*dt
     vy = flight['vy'] + ay*dt
@@ -355,22 +370,58 @@ def step_sim():
     if y > flight['apogee']:
         flight['apogee'] = y
 
+def recommend_delay():
+    compute_geom()
+    motor = geom['motor']
+    t = 0.0; vy = 0.0; y = 0.0
+    launched = False
+    guard = 0
+    while guard < 30000:
+        guard += 1
+        thrust = motor_thrust(motor, t)
+        _x, total_mass, _a, _b, _c, _d = calc_CG(t)
+        Fd_y = 0.0
+        if abs(vy) > 0.01:
+            Fd = 0.5 * rho_air * vy**2 * calc_CD(abs(vy), t) * geom['A_ref']
+            Fd_y = -Fd * (vy/abs(vy))
+        ay = (thrust + Fd_y - total_mass*g) / total_mass
+        vy += ay*dt
+        y  += vy*dt
+        t  += dt
+        if not launched:
+            if y > 0:
+                launched = True
+            else:
+                y = 0.0; vy = 0.0
+        elif vy <= 0:
+            break
+    delay = t - motor['burn_time']
+    return max(0.0, delay)
+
 def on_tab_click(b):
     state["tab"] = b.tab_name
     draw_ui()
 
 def on_slider_change(s):
     state[s.key_name] = s.value
+    if s.key_name == "fin_b":
+        state["fin_b"] = min(state["fin_b"], max(0.005, state["fin_a"] - state["fin_m"] - 0.005))
+    elif s.key_name == "fin_m":
+        state["fin_m"] = min(state["fin_m"], max(0.0, state["fin_a"] - state["fin_b"] - 0.005))
+    elif s.key_name == "fin_a":
+        state["fin_b"] = min(state["fin_b"], max(0.005, state["fin_a"] - state["fin_m"] - 0.005))
+        state["fin_m"] = min(state["fin_m"], max(0.0, state["fin_a"] - state["fin_b"] - 0.005))
     if s.key_name in slider_labels:
         lbl = slider_labels[s.key_name]
+        val = state[s.key_name]
         if s.key_name in ("nc_length","bt_length","bt_diameter","fin_a","fin_b","fin_s","fin_m","para_shroud","para_canopy"):
-            lbl.text = '  {:.3f} m'.format(s.value)
+            lbl.text = '  {:.3f} m'.format(val)
         elif s.key_name == "motor_delay":
-            lbl.text = '  {:.1f} s'.format(s.value)
+            lbl.text = '  {:.1f} s'.format(val)
         elif s.key_name == "wind_mag":
-            lbl.text = '  {:.3f} m/s'.format(s.value)
+            lbl.text = '  {:.3f} m/s'.format(val)
         elif s.key_name == "wind_angle":
-            lbl.text = '  {:.3f} deg'.format(s.value)
+            lbl.text = '  {:.3f} deg'.format(val)
 
 def on_option_click(b):
     state[b.key_name] = b.opt_value
@@ -385,7 +436,8 @@ def on_launch(b):
     flight.clear()
     flight.update(t=0.0, x=0.0, y=0.0, vx=0.0, vy=0.0,
                   theta=0.0, omega=0.0, apogee=0.0,
-                  launched=False, done=False)
+                  launched=False, done=False, chute=False)
+    scene.range = 0.4
     mode = "launch"
     draw_ui()
     make_flight_graphs()
@@ -393,6 +445,7 @@ def on_launch(b):
 def on_back_to_design(b):
     global mode
     mode = "design"
+    scene.range = 0.4
     clear_flight_graphs()
     draw_ui()
 
@@ -400,6 +453,7 @@ def on_reset(b):
     global mode
     state.update(DEFAULTS)
     mode = "design"
+    scene.range = 0.4
     clear_flight_graphs()
     draw_ui()
 
@@ -463,8 +517,6 @@ def draw_ui():
         a = state["fin_a"]
         b_max = max(0.006, a - state["fin_m"] - 0.005)
         m_max = max(0.001, a - state["fin_b"] - 0.005)
-        state["fin_b"] = min(state["fin_b"], b_max)
-        state["fin_m"] = min(state["fin_m"], m_max)
 
         scene.append_to_caption("  <b>a (root chord)</b>  ")
         s = slider(min=0.03, max=0.20, value=state["fin_a"], bind=on_slider_change)
@@ -534,6 +586,13 @@ def draw_ui():
         s2 = slider(min=0.1, max=1.0, value=state["para_canopy"], bind=on_slider_change)
         s2.key_name = "para_canopy"
         slider_labels["para_canopy"] = wtext(text='  {:.3f} m'.format(state["para_canopy"]))
+        scene.append_to_caption("\n\n")
+        rec_delay = recommend_delay()
+        scene.append_to_caption(
+            "<div style='margin: 5px 0 5px 30px; padding: 8px; border: 1px solid #ccc; "
+            "background: #f5f5f5; font-size: 13px;'>"
+            + f'\t For this parachute to deploy, set the <b>Delay Charge</b> (in the Motor tab) to about <b>{round(rec_delay,3)} s</b>.'
+            + "</div>")
         scene.append_to_caption("\n")
 
     elif active == "Wind":
@@ -543,9 +602,16 @@ def draw_ui():
         slider_labels["wind_mag"] = wtext(text='  {:.3f} m/s'.format(state["wind_mag"]))
         scene.append_to_caption("\n\n")
         scene.append_to_caption("  <b>Wind Angle</b>  ")
-        s2 = slider(min=-60.0, max=60.0, value=state["wind_angle"], bind=on_slider_change)
+        s2 = slider(min=-90.0, max=90.0, value=state["wind_angle"], bind=on_slider_change)
         s2.key_name = "wind_angle"
         slider_labels["wind_angle"] = wtext(text='  {:.3f} deg'.format(state["wind_angle"]))
+        scene.append_to_caption("\n\n")
+        scene.append_to_caption(
+            "<div style='margin: 5px 0 5px 30px; padding: 8px; border: 1px solid #ccc; "
+            "background: #f5f5f5; font-size: 13px;'>"
+            + "\tThe <b>wind angle is measured from the horizontal</b>: 0&deg; is wind blowing straight "
+            + "sideways, +90&deg; is straight up, and -90&deg; is straight down."
+            + "</div>")
         scene.append_to_caption("\n")
 
     elif active == "Graphs":
@@ -632,6 +698,8 @@ body_curve   = curve(color=color.black)
 nose_curve   = curve(color=color.black)
 fin_curve_l  = curve(color=color.black)
 fin_curve_r  = curve(color=color.black)
+chute_canopy = curve(color=color.red,       visible=False)
+chute_shroud = curve(color=color.gray(0.4), visible=False)
 
 cg_marker = sphere(pos=vector(0,0,0), radius=0.008, color=color.red,  visible=False)
 cp_marker = sphere(pos=vector(0,0,0), radius=0.008, color=color.blue, visible=False)
@@ -754,6 +822,8 @@ def redraw_design():
         fin_curve_r.append(p)
 
     update_fill(vector(0, 0, 0), 0.0, False)
+    chute_canopy.visible = False
+    chute_shroud.visible = False
 
     compute_geom()
     x_CG, total_mass, _b, _c, _d, _e = calc_CG(0.0)
@@ -805,6 +875,25 @@ def redraw_launch():
     r = state["bt_diameter"] / 2
     cg_label.pos = vector(pivot.x + r + 0.03, pivot.y, 0)
     cp_label.pos = vector(cp_pos.x + r + 0.03, cp_pos.y, 0)
+
+    if flight['chute']:
+        nose_y = state["bt_length"]/2 + state["nc_length"]
+        room   = max(0.05, 0.39 - nose_y)
+        rim_y  = nose_y + room*0.4
+        dome_h = room*0.6
+        rc     = min(state["para_canopy"]/2, 0.20)
+        chute_canopy.clear()
+        for k in range(25):
+            ang = pi * (1 - k/24.0)
+            chute_canopy.append(rotate_about(vector(rc*cos(ang), rim_y + dome_h*sin(ang), 0), pivot, th))
+        chute_shroud.clear()
+        for p in [vector(-rc, rim_y, 0), vector(0, nose_y, 0), vector(rc, rim_y, 0)]:
+            chute_shroud.append(rotate_about(p, pivot, th))
+        chute_canopy.visible = True
+        chute_shroud.visible = True
+    else:
+        chute_canopy.visible = False
+        chute_shroud.visible = False
 
 GRAPH_COLORS = [color.blue, color.red, color.green, color.magenta]
 flight_graphs = []
