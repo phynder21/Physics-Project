@@ -57,7 +57,9 @@ dt = 0.01
 # wind_VX = wind_V * cos(radians(wind_angle))
 # wind_VY = wind_V * sin(radians(wind_angle))
 
-TABS = ["Nosecone", "Body Tube", "Fins", "Motor", "Parachute", "Wind"]
+TABS = ["Nosecone", "Body Tube", "Fins", "Motor", "Parachute", "Wind", "Graphs"]
+GRAPH_VARS = ["Flight time", "Height", "Vertical velocity",
+              "Total velocity", "Pitch", "Pitch angular velocity"]
 DEFAULTS = dict(
     tab="Nosecone",
     nc_length=0.13,  nc_type="Parabolic",
@@ -65,7 +67,11 @@ DEFAULTS = dict(
     fin_a=0.095, fin_b=0.060, fin_s=0.080, fin_n=4, fin_m=0.036,
     motor_type="C6", motor_delay=4.0,
     para_shroud=0.457, para_canopy=0.456,
-    wind_angle = 30, wind_mag = 3.0
+    wind_angle = 30, wind_mag = 3.0,
+    g1_x="Flight time", g1_y="Height",
+    g2_x="Flight time", g2_y="Total velocity",
+    g3_x="Flight time", g3_y="Pitch",
+    g4_x="Height",      g4_y="Vertical velocity",
 )
 state = dict(DEFAULTS)
 slider_labels = {}
@@ -370,6 +376,9 @@ def on_option_click(b):
     state[b.key_name] = b.opt_value
     draw_ui()
 
+def on_menu_change(m):
+    state[m.key_name] = m.selected
+
 def on_launch(b):
     global mode
     compute_geom()
@@ -379,16 +388,19 @@ def on_launch(b):
                   launched=False, done=False)
     mode = "launch"
     draw_ui()
+    make_flight_graphs()
 
 def on_back_to_design(b):
     global mode
     mode = "design"
+    clear_flight_graphs()
     draw_ui()
 
 def on_reset(b):
     global mode
     state.update(DEFAULTS)
     mode = "design"
+    clear_flight_graphs()
     draw_ui()
 
 def draw_ui():
@@ -409,9 +421,14 @@ def draw_ui():
 
     scene.append_to_caption("<div><h2 style='margin: 0;'>Design Workbench</h2></div><br>")
     for i in TABS:
-        lbl = " * " + i + " * " if state["tab"] == i else "   " + i + "   "
-        b = button(text=lbl, bind=on_tab_click)
+        b = button(text="  " + i + "  ", bind=on_tab_click)
         b.tab_name = i
+        if state["tab"] == i:
+            b.background = color.gray(0.4)
+            b.color = color.white
+        else:
+            b.background = color.white
+            b.color = color.black
     scene.append_to_caption("<hr style='margin: 15px 0;'>")
 
     active = state["tab"]
@@ -531,6 +548,17 @@ def draw_ui():
         slider_labels["wind_angle"] = wtext(text='  {:.3f} deg'.format(state["wind_angle"]))
         scene.append_to_caption("\n")
 
+    elif active == "Graphs":
+        scene.append_to_caption("  <b>Customize the X and Y axis for each flight graph</b>\n\n")
+        for gi in [1, 2, 3, 4]:
+            scene.append_to_caption("  <b>Graph {}</b>   X: ".format(gi))
+            mx = menu(choices=GRAPH_VARS, selected=state["g{}_x".format(gi)], bind=on_menu_change)
+            mx.key_name = "g{}_x".format(gi)
+            scene.append_to_caption("   Y: ")
+            my = menu(choices=GRAPH_VARS, selected=state["g{}_y".format(gi)], bind=on_menu_change)
+            my.key_name = "g{}_y".format(gi)
+            scene.append_to_caption("\n\n")
+
     scene.append_to_caption("<hr style='margin: 15px 0;'>")
     metric_lbl = wtext(text="<b>Stability margin:</b> --    <b>Mass:</b> -- g\n")
     scene.append_to_caption("\n\n")
@@ -611,12 +639,12 @@ cg_label  = label(pos=vector(0,0,0), text="CG", color=color.red,  box=False, opa
 cp_label  = label(pos=vector(0,0,0), text="CP", color=color.blue, box=False, opacity=0, height=10, visible=False)
 
 SKY_URL       = "https://raw.githubusercontent.com/phynder21/Physics-Project/main/sky.jpg"
-GROUND_LEVEL  = -0.22       # y where the ground sits at lift-off
-TILE_H        = 3.6         # height of one image copy (scene units)
-IMG_W         = 1.4         # width of one image copy (set TILE_H/IMG_W ~ image h/w to avoid stretch)
-NTILES        = 3           # how many copies exist at once (recycled)
-BG_Z          = -0.6        # behind the rocket (rocket is at z = 0)
-ALT_PER_IMAGE = 120.0       # altitude (m) represented by one full image copy
+GROUND_LEVEL  = -0.22
+TILE_H        = 3.6
+IMG_W         = 1.4
+NTILES        = 3 
+BG_Z          = -0.6
+ALT_PER_IMAGE = 120.0 
 BG_SCALE      = TILE_H / ALT_PER_IMAGE
 
 sky_tiles = []
@@ -778,6 +806,50 @@ def redraw_launch():
     cg_label.pos = vector(pivot.x + r + 0.03, pivot.y, 0)
     cp_label.pos = vector(cp_pos.x + r + 0.03, cp_pos.y, 0)
 
+GRAPH_COLORS = [color.blue, color.red, color.green, color.magenta]
+flight_graphs = []
+flight_curves = []
+flight_axes   = []
+
+def graph_value(name):
+    if   name == "Flight time":             return flight['t']
+    elif name == "Height":                  return flight['y']
+    elif name == "Vertical velocity":       return flight['vy']
+    elif name == "Total velocity":          return sqrt(flight['vx']**2 + flight['vy']**2)
+    elif name == "Pitch":                   return flight['theta'] * (180/pi)
+    elif name == "Pitch angular velocity":  return flight['omega'] * (180/pi)
+    return 0.0
+
+def clear_flight_graphs():
+    global flight_graphs, flight_curves, flight_axes
+    for c in flight_curves:
+        c.delete()
+    for gph in flight_graphs:
+        gph.delete()
+    flight_graphs = []
+    flight_curves = []
+    flight_axes   = []
+
+def make_flight_graphs():
+    global flight_graphs, flight_curves, flight_axes
+    clear_flight_graphs()
+    for gi in [1, 2, 3, 4]:
+        xname = state["g{}_x".format(gi)]
+        yname = state["g{}_y".format(gi)]
+        gph = graph(width=340, height=240, align="left", fast=True,
+                    title="<b>{} vs {}</b>".format(yname, xname),
+                    xtitle=xname, ytitle=yname)
+        c = gcurve(graph=gph, color=GRAPH_COLORS[gi-1])
+        flight_graphs.append(gph)
+        flight_curves.append(c)
+        flight_axes.append([xname, yname])
+
+def update_graphs():
+    for gi in range(len(flight_curves)):
+        xname = flight_axes[gi][0]
+        yname = flight_axes[gi][1]
+        flight_curves[gi].plot(graph_value(xname), graph_value(yname))
+
 draw_ui()
 redraw_design()
 
@@ -800,8 +872,5 @@ while True:
             height_lbl.text = "Height: {:.3f} m  (apogee {:.3f} m)\n".format(flight['y'], flight['apogee'])
         if time_lbl is not None:
             time_lbl.text   = "Time:   {:.3f} s\n".format(flight['t'])
-        if height_lbl is not None and time_lbl is not None:
-            gPhasePlot = graph(title="Phase Space", xtitle="Position", ytitle="Velocity")
-            gPhase = gcurve(color=color.blue) 
-            
-        
+        if not flight['done']:
+            update_graphs()
