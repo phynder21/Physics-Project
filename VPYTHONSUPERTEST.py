@@ -858,7 +858,7 @@ steps_per_frame = 4
 while True:
     rate(25)
     if mode == "design":
-        set_bg_visible(False)
+        set_bg_visible(True)
         redraw_design()
     else:
         set_bg_visible(True)
