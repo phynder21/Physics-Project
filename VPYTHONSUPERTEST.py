@@ -40,7 +40,6 @@ def trapz(ys, xs):
         total += (ys[i] + ys[i-1]) / 2.0 * (xs[i] - xs[i-1])
     return total
 
-# === Scene setup ===
 scene.align = "left"
 scene.width  = 450
 scene.height = 550
@@ -74,6 +73,7 @@ mode = "design"
 flight = {}
 height_lbl = None
 time_lbl   = None
+metric_lbl = None
 
 def build_motor(time_arr, thrust_arr, mass_prop, mass_dry, name, motor_length):
     impulse = trapz(thrust_arr, time_arr)
@@ -115,9 +115,9 @@ motors_by_name['D12'] = build_motor(d12_time, d12_thrust, 0.021, 0.023, 'D12', 0
 motors_by_name['F15'] = build_motor(f15_time, f15_thrust, 0.060, 0.042, 'F15', 0.114)
 
 motor_descriptions = {
-    'C6':  "\t A C class motor has a total Impulse between 5 and 10 Newton Seconds \n \n \t The average thrust number of 6 implies it outputs an average of 6 Newtons of thrust\n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
-    'D12': "\t A D class motor has a total Impulse between 10 and 20 Newton Seconds \n \n \t The average thrust number of 12 implies it outputs an average of 12 Newtons of thrust\n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
-    'F15': "\t A F class motor has a total Impulse between 40 and 80 Newton Seconds \n \n \t The average thrust number of 15 implies it outputs an average of 15 Newtons of thrust\n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
+    'C6':  "\t A C class motor has a total Impulse between <b> 5 and 10 Newton Seconds </b> \n \n \t The average thrust number of 6 implies it outputs an average of <b> 6 Newtons of thrust </b>\n \n \t Typically, a rocket launched on this motor should be between <b> 113 and 142 grams </b> \n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
+    'D12': "\t A D class motor has a total Impulse between <b> 10 and 20 Newton Seconds </b> \n \n \t The average thrust number of 12 implies it outputs an average of <b>12 Newtons of thrust </b>\n \n \t Typically, a rocket launched on this motor should be between <b> 150 and 450 grams </b> \n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
+    'F15': "\t A F class motor has a total Impulse between <b>40 and 80 Newton Seconds </b> \n \n \t The average thrust number of 15 implies it outputs an average of <b>15 Newtons of thrust </b>\n \n \t Typically, a rocket launched on this motor should be between <b> 800 and 1500 grams </b> \n \n \t Note that the delay charge is the amount of seconds after main fuel burnout that the ejection charge ejects the parachute",
 }
 
 def build_thrust_svg(motor_name):
@@ -392,7 +392,7 @@ def on_reset(b):
     draw_ui()
 
 def draw_ui():
-    global height_lbl, time_lbl
+    global height_lbl, time_lbl, metric_lbl
     scene.caption = ""
     scene.append_to_caption("<div style='margin-left: 30px; display: inline-block; vertical-align: top; font-family: sans-serif;'>")
 
@@ -532,6 +532,17 @@ def draw_ui():
         scene.append_to_caption("\n")
 
     scene.append_to_caption("<hr style='margin: 15px 0;'>")
+    metric_lbl = wtext(text="<b>Stability margin:</b> --    <b>Mass:</b> -- g\n")
+    scene.append_to_caption("\n\n")
+    scene.append_to_caption(
+    "<div style='display: flex; gap: 10px; margin: 5px 0 5px 30px; align-items: stretch;'>"
+    "<div style='flex: 1; padding: 8px; border: 1px solid #ccc; "
+    "background: #f5f5f5; font-size: 13px; white-space: pre-wrap;'>"
+    + "In Model Rocketry, we aim to have the Stability Margin(dist(CoG,CoP)/body tube diameter) between <b>1.5 and 2.5 cal</b>. Also, note that we want the CoP to be below the CoG to be stable."
+    + "</div>")
+    scene.append_to_caption("\n")
+
+    scene.append_to_caption("<hr style='margin: 15px 0;'>")
     button(text="Launch!", bind=on_launch)
     scene.append_to_caption("   ")
     button(text="Reset", bind=on_reset)
@@ -599,6 +610,107 @@ cp_marker = sphere(pos=vector(0,0,0), radius=0.008, color=color.blue, visible=Fa
 cg_label  = label(pos=vector(0,0,0), text="CG", color=color.red,  box=False, opacity=0, height=10, visible=False)
 cp_label  = label(pos=vector(0,0,0), text="CP", color=color.blue, box=False, opacity=0, height=10, visible=False)
 
+SKY_URL       = "https://raw.githubusercontent.com/phynder21/Physics-Project/main/sky.jpg"
+GROUND_LEVEL  = -0.22       # y where the ground sits at lift-off
+TILE_H        = 3.6         # height of one image copy (scene units)
+IMG_W         = 1.4         # width of one image copy (set TILE_H/IMG_W ~ image h/w to avoid stretch)
+NTILES        = 3           # how many copies exist at once (recycled)
+BG_Z          = -0.6        # behind the rocket (rocket is at z = 0)
+ALT_PER_IMAGE = 120.0       # altitude (m) represented by one full image copy
+BG_SCALE      = TILE_H / ALT_PER_IMAGE
+
+sky_tiles = []
+for _t in range(NTILES):
+    sky_tiles.append(box(pos=vector(0, GROUND_LEVEL + (_t + 0.5)*TILE_H, BG_Z),
+                         size=vector(IMG_W, TILE_H, 0.005),
+                         texture={'file': SKY_URL, 'mapping': 'sign'},
+                         visible=False))
+
+GROUND_BOX_H = 4.0
+ground_box = box(pos=vector(0, GROUND_LEVEL - GROUND_BOX_H/2, BG_Z + 0.02),
+                 size=vector(IMG_W*1.2, GROUND_BOX_H, 0.005),
+                 color=vector(0.20, 0.55, 0.18), visible=False)
+
+def set_bg_visible(v):
+    for _s in sky_tiles:
+        _s.visible = v
+    ground_box.visible = v
+
+def update_background():
+    scroll = flight['y'] * BG_SCALE
+    if scroll < 0:
+        scroll = 0
+    center_idx = int((scroll - GROUND_LEVEL) / TILE_H)
+    i0 = center_idx - 1
+    for j in range(NTILES):
+        ci = i0 + j
+        if ci < 0:
+            sky_tiles[j].visible = False      # below ground -> the green box covers it
+        else:
+            sky_tiles[j].visible = True
+            sky_tiles[j].pos = vector(0, GROUND_LEVEL + (ci + 0.5)*TILE_H - scroll, BG_Z)
+    ground_box.pos = vector(0, (GROUND_LEVEL - GROUND_BOX_H/2) - scroll, BG_Z + 0.02)
+
+Z_FILL        = -0.05      
+NC_FILL_STEPS = 24
+
+def vert():
+    return vertex(pos=vector(0, 0, Z_FILL), color=color.white, normal=vector(0, 0, 1))
+
+vb_body  = []
+vb_fin_l = []
+vb_fin_r = []
+vb_nose  = []
+for _q in range(4):
+    vb_body.append(vert())
+    vb_fin_l.append(vert())
+    vb_fin_r.append(vert())
+for _q in range(2*(NC_FILL_STEPS + 1)):
+    vb_nose.append(vert())
+
+quad(vs=vb_body)
+quad(vs=vb_fin_l)
+quad(vs=vb_fin_r)
+for _i in range(NC_FILL_STEPS):
+    quad(vs=[vb_nose[2*_i], vb_nose[2*_i+1], vb_nose[2*_i+3], vb_nose[2*_i+2]])
+
+def nose_fill_pairs():
+    r       = state["bt_diameter"] / 2
+    length  = state["nc_length"]
+    bt_top  = state["bt_length"] / 2
+    nc_type = state["nc_type"]
+    pairs = []
+    for i in range(NC_FILL_STEPS + 1):
+        tt = i / NC_FILL_STEPS
+        y  = bt_top + tt * length
+        if   nc_type == "Parabolic": x = r * (1 - tt**2)
+        elif nc_type == "Ogive":     x = r * sqrt(max(0.0, 1 - tt**2))
+        else:                        x = r * (1 - tt)
+        pairs.append((vector(x, y, 0), vector(-x, y, 0)))
+    return pairs
+
+def _place(vlist, pts, pivot, th, do_rot):
+    for k in range(len(pts)):
+        p = pts[k]
+        if do_rot:
+            q = rotate_about(p, pivot, th)
+        else:
+            q = p
+        vlist[k].pos = vector(q.x, q.y, Z_FILL)
+
+def update_fill(pivot, th, do_rot):
+    bc = makeRect(state["bt_diameter"], state["bt_length"])
+    _place(vb_body, [bc[0], bc[1], bc[2], bc[3]], pivot, th, do_rot)
+    fl = makeFin(+1); fr = makeFin(-1)
+    _place(vb_fin_l, [fl[0], fl[1], fl[2], fl[3]], pivot, th, do_rot)
+    _place(vb_fin_r, [fr[0], fr[1], fr[2], fr[3]], pivot, th, do_rot)
+    pairs = nose_fill_pairs()
+    npts = []
+    for i in range(NC_FILL_STEPS + 1):
+        npts.append(pairs[i][0])
+        npts.append(pairs[i][1])
+    _place(vb_nose, npts, vector(0, 0, 0) if not do_rot else pivot, th, do_rot)
+
 def redraw_design():
     body_curve.clear()
     for p in makeRect(state["bt_diameter"], state["bt_length"]):
@@ -613,9 +725,14 @@ def redraw_design():
     for p in makeFin(-1):
         fin_curve_r.append(p)
 
+    update_fill(vector(0, 0, 0), 0.0, False)
+
     compute_geom()
-    x_CG, _a, _b, _c, _d, _e = calc_CG(0.0)
+    x_CG, total_mass, _b, _c, _d, _e = calc_CG(0.0)
     x_CP, _f  = calc_CP()
+    margin = abs(x_CG - x_CP) / state["bt_diameter"]
+    if metric_lbl is not None:
+        metric_lbl.text = f'<b>Stability margin:</b> {round(margin,3)} cal    <b>Mass:</b> {round(total_mass *1000,3)} g'
     cg_y = cg_visual_y(x_CG)
     cp_y = cg_visual_y(x_CP)
     r = state["bt_diameter"] / 2
@@ -650,6 +767,8 @@ def redraw_launch():
     for p in makeFin(-1):
         fin_curve_r.append(rotate_about(p, pivot, th))
 
+    update_fill(pivot, th, True)
+
     x_CP, _f = calc_CP()
     cp_unrot = vector(0, cg_visual_y(x_CP), 0)
     cp_pos = rotate_about(cp_unrot, pivot, th)
@@ -667,13 +786,16 @@ steps_per_frame = 4
 while True:
     rate(25)
     if mode == "design":
+        set_bg_visible(False)
         redraw_design()
     else:
+        set_bg_visible(True)
         for _ in range(steps_per_frame):
             step_sim()
             if flight['done']:
                 break
         redraw_launch()
+        update_background()
         if height_lbl is not None:
             height_lbl.text = "Height: {:.3f} m  (apogee {:.3f} m)\n".format(flight['y'], flight['apogee'])
         if time_lbl is not None:
