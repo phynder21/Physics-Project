@@ -641,7 +641,7 @@ cp_label  = label(pos=vector(0,0,0), text="CP", color=color.blue, box=False, opa
 SKY_URL       = "https://raw.githubusercontent.com/phynder21/Physics-Project/main/sky.jpg"
 GROUND_LEVEL  = -0.22
 IMG_W         = 1.4
-TILE_H        = IMG_W * (5304/7952)   # match sky.jpg aspect (7952x5304) so clouds aren't stretched
+TILE_H        = IMG_W * (5304/7952)   
 NTILES        = 3 
 BG_Z          = -0.6
 ALT_PER_IMAGE = 120.0 
@@ -652,12 +652,12 @@ for _t in range(NTILES):
     sky_tiles.append(box(pos=vector(0, GROUND_LEVEL + (_t + 0.5)*TILE_H, BG_Z),
                          size=vector(IMG_W, TILE_H, 0.005),
                          texture={'file': SKY_URL, 'mapping': 'sign'},
-                         visible=False))
+                         emissive = True, visible=False))
 
 GROUND_BOX_H = 4.0
 ground_box = box(pos=vector(0, GROUND_LEVEL - GROUND_BOX_H/2, BG_Z + 0.02),
                  size=vector(IMG_W*1.2, GROUND_BOX_H, 0.005),
-                 color=vector(0.20, 0.55, 0.18), visible=False)
+                 color=vector(0.20, 0.55, 0.18), emissive = True, visible=False)
 
 def set_bg_visible(v):
     for _s in sky_tiles:
@@ -673,13 +673,13 @@ def update_background():
     for j in range(NTILES):
         ci = i0 + j
         if ci < 0:
-            sky_tiles[j].visible = False      # below ground -> the green box covers it
+            sky_tiles[j].visible = False
         else:
             sky_tiles[j].visible = True
             sky_tiles[j].pos = vector(0, GROUND_LEVEL + (ci + 0.5)*TILE_H - scroll, BG_Z)
     ground_box.pos = vector(0, (GROUND_LEVEL - GROUND_BOX_H/2) - scroll, BG_Z + 0.02)
 
-Z_FILL        = -0.05      
+Z_FILL        = -0.005
 NC_FILL_STEPS = 24
 
 def vert():
