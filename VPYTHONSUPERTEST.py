@@ -510,10 +510,15 @@ def draw_ui():
         scene.append_to_caption("\n\n")
         scene.append_to_caption("  <b>Type</b>  ")
         for opt in ["Parabolic", "Ogive", "Conical"]:
-            lbl = " [" + opt + "] " if state["nc_type"] == opt else "  " + opt + "  "
-            b = button(text=lbl, bind=on_option_click)
+            b = button(text="  " + opt + "  ", bind=on_option_click)
             b.key_name = "nc_type"
             b.opt_value = opt
+            if state["nc_type"] == opt:
+                b.background = color.gray(0.4)
+                b.color = color.white
+            else:
+                b.background = color.white
+                b.color = color.black
         scene.append_to_caption("\n")
 
     elif active == "Body Tube":
@@ -533,25 +538,25 @@ def draw_ui():
         b_max = max(0.006, a - state["fin_m"] - 0.005)
         m_max = max(0.001, a - state["fin_b"] - 0.005)
 
-        scene.append_to_caption("  <b>a (root chord)</b>  ")
+        scene.append_to_caption("  <b>root chord</b>  ")
         s = slider(min=0.03, max=0.20, value=state["fin_a"], bind=on_slider_change)
         s.key_name = "fin_a"
         slider_labels["fin_a"] = wtext(text='  {:.3f} m'.format(state["fin_a"]))
         scene.append_to_caption("\n\n")
 
-        scene.append_to_caption("  <b>b (tip chord)</b>  ")
+        scene.append_to_caption("  <b>tip chord</b>  ")
         s = slider(min=0.005, max=b_max, value=state["fin_b"], bind=on_slider_change)
         s.key_name = "fin_b"
         slider_labels["fin_b"] = wtext(text='  {:.3f} m'.format(state["fin_b"]))
         scene.append_to_caption("\n\n")
 
-        scene.append_to_caption("  <b>s (semi-span)</b>  ")
+        scene.append_to_caption("  <b>semi-span</b>  ")
         s = slider(min=0.01, max=0.15, value=state["fin_s"], bind=on_slider_change)
         s.key_name = "fin_s"
         slider_labels["fin_s"] = wtext(text='  {:.3f} m'.format(state["fin_s"]))
         scene.append_to_caption("\n\n")
 
-        scene.append_to_caption("  <b>m (sweep offset)</b>  ")
+        scene.append_to_caption("  <b>sweep offset</b>  ")
         s = slider(min=0.0, max=m_max, value=state["fin_m"], bind=on_slider_change)
         s.key_name = "fin_m"
         slider_labels["fin_m"] = wtext(text='  {:.3f} m'.format(state["fin_m"]))
@@ -559,19 +564,29 @@ def draw_ui():
 
         scene.append_to_caption("  <b>Number of Fins</b>  ")
         for opt in [3, 4, 6]:
-            lbl = " [" + opt + "] " if state["fin_n"] == opt else "  " + str(opt) + "  "
-            b = button(text=lbl, bind=on_option_click)
+            b = button(text="  " + str(opt) + "  ", bind=on_option_click)
             b.key_name = "fin_n"
             b.opt_value = opt
+            if state["fin_n"] == opt:
+                b.background = color.gray(0.4)
+                b.color = color.white
+            else:
+                b.background = color.white
+                b.color = color.black
         scene.append_to_caption("\n")
 
     elif active == "Motor":
         scene.append_to_caption("  <b>Motor type</b>  ")
         for opt in ["C6", "D12", "F15"]:
-            lbl = " [" + opt + "] " if state["motor_type"] == opt else "  " + opt + "  "
-            b = button(text=lbl, bind=on_option_click)
+            b = button(text="  " + opt + "  ", bind=on_option_click)
             b.key_name = "motor_type"
             b.opt_value = opt
+            if state["motor_type"] == opt:
+                b.background = color.gray(0.4)
+                b.color = color.white
+            else:
+                b.background = color.white
+                b.color = color.black
         scene.append_to_caption("\n\n")
         scene.append_to_caption("  <b>Delay Charge</b>  ")
         s = slider(min=0, max=15, value=state["motor_delay"], bind=on_slider_change)
