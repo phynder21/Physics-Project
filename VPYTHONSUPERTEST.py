@@ -449,6 +449,19 @@ def on_back_to_design(b):
     clear_flight_graphs()
     draw_ui()
 
+def on_skip_to_end(b):
+    guard = 0
+    while not flight['done'] and guard < 200000:
+        guard += 1
+        step_sim()
+        update_graphs()
+    redraw_launch()
+    update_background()
+    if height_lbl is not None:
+        height_lbl.text = "Height: {:.3f} m  (apogee {:.3f} m)\n".format(flight['y'], flight['apogee'])
+    if time_lbl is not None:
+        time_lbl.text   = "Time:   {:.3f} s\n".format(flight['t'])
+
 def on_reset(b):
     global mode
     state.update(DEFAULTS)
@@ -469,6 +482,8 @@ def draw_ui():
         time_lbl   = wtext(text="Time:   0.000 s\n")
         scene.append_to_caption("\n\n")
         scene.append_to_caption("<hr style='margin: 15px 0;'>")
+        b = button(text="Skip to end", bind=on_skip_to_end)
+        scene.append_to_caption("   ")
         b = button(text="Back to design", bind=on_back_to_design)
         scene.append_to_caption("</div>")
         return
