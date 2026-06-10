@@ -640,8 +640,8 @@ cp_label  = label(pos=vector(0,0,0), text="CP", color=color.blue, box=False, opa
 
 SKY_URL       = "https://raw.githubusercontent.com/phynder21/Physics-Project/main/sky.jpg"
 GROUND_LEVEL  = -0.22
-TILE_H        = 3.6
 IMG_W         = 1.4
+TILE_H        = IMG_W * (5304/7952)   # match sky.jpg aspect (7952x5304) so clouds aren't stretched
 NTILES        = 3 
 BG_Z          = -0.6
 ALT_PER_IMAGE = 120.0 
