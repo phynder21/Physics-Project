@@ -404,13 +404,6 @@ def on_tab_click(b):
 
 def on_slider_change(s):
     state[s.key_name] = s.value
-    if s.key_name == "fin_b":
-        state["fin_b"] = min(state["fin_b"], max(0.005, state["fin_a"] - state["fin_m"] - 0.005))
-    elif s.key_name == "fin_m":
-        state["fin_m"] = min(state["fin_m"], max(0.0, state["fin_a"] - state["fin_b"] - 0.005))
-    elif s.key_name == "fin_a":
-        state["fin_b"] = min(state["fin_b"], max(0.005, state["fin_a"] - state["fin_m"] - 0.005))
-        state["fin_m"] = min(state["fin_m"], max(0.0, state["fin_a"] - state["fin_b"] - 0.005))
     if s.key_name in slider_labels:
         lbl = slider_labels[s.key_name]
         val = state[s.key_name]
@@ -535,10 +528,6 @@ def draw_ui():
         scene.append_to_caption("\n")
 
     elif active == "Fins":
-        a = state["fin_a"]
-        b_max = max(0.006, a - state["fin_m"] - 0.005)
-        m_max = max(0.001, a - state["fin_b"] - 0.005)
-
         scene.append_to_caption("  <b>root chord</b>  ")
         s = slider(min=0.03, max=0.20, value=state["fin_a"], bind=on_slider_change)
         s.key_name = "fin_a"
@@ -546,7 +535,7 @@ def draw_ui():
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>tip chord</b>  ")
-        s = slider(min=0.005, max=b_max, value=state["fin_b"], bind=on_slider_change)
+        s = slider(min=0.005, max=0.20, value=state["fin_b"], bind=on_slider_change)
         s.key_name = "fin_b"
         slider_labels["fin_b"] = wtext(text='  {:.3f} m'.format(state["fin_b"]))
         scene.append_to_caption("\n\n")
@@ -558,7 +547,7 @@ def draw_ui():
         scene.append_to_caption("\n\n")
 
         scene.append_to_caption("  <b>sweep offset</b>  ")
-        s = slider(min=0.0, max=m_max, value=state["fin_m"], bind=on_slider_change)
+        s = slider(min=0.0, max=0.15, value=state["fin_m"], bind=on_slider_change)
         s.key_name = "fin_m"
         slider_labels["fin_m"] = wtext(text='  {:.3f} m'.format(state["fin_m"]))
         scene.append_to_caption("\n\n")
